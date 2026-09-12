@@ -1,0 +1,506 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Rajdhani:wght@600;700&display=swap');
+
+:root {
+  --paper: #f2ead8;
+  --ink: #141110;
+  --red: #e03a24;
+  --gold: #ffb42e;
+  --blue: #38b6ff;
+  --purple: #b06cff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: #0b0908;
+  font-family: 'Rajdhani', sans-serif;
+  color: var(--paper);
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+canvas#cv {
+  display: block;
+  box-shadow: 0 0 35px rgba(0, 0, 0, 0.85);
+}
+
+#errBox {
+  position: fixed;
+  left: 8px;
+  bottom: 8px;
+  z-index: 999;
+  display: none;
+  max-width: 92%;
+  background: #3a0d06;
+  color: #ffd7c8;
+  border: 2px solid var(--red);
+  padding: 8px 12px;
+  font: 600 14px 'Rajdhani', sans-serif;
+  white-space: pre-wrap;
+}
+
+.scr {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(12, 10, 8, 0.84);
+  backdrop-filter: blur(5px);
+  z-index: 30;
+  padding: 16px;
+  text-align: center;
+  animation: fadeIn 0.18s ease-out;
+}
+
+.scr[hidden] {
+  display: none !important;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+h1.logo {
+  font-family: 'Bangers', cursive;
+  font-size: clamp(48px, 9vw, 116px);
+  letter-spacing: 0.04em;
+  line-height: 0.9;
+  transform: rotate(-2deg);
+  text-shadow: 5px 5px 0 var(--red), 10px 10px 0 rgba(0, 0, 0, 0.65);
+}
+
+.tag {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  color: var(--gold);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+.btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 100%;
+  max-width: 320px;
+  align-items: center;
+}
+
+.btn {
+  font-family: 'Bangers', cursive;
+  letter-spacing: 0.09em;
+  font-size: 25px;
+  color: var(--paper);
+  background: transparent;
+  border: 3px solid var(--paper);
+  padding: 8px 36px;
+  cursor: pointer;
+  transform: skew(-4deg) rotate(-1deg);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.6);
+  transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn:hover {
+  background: var(--paper);
+  color: var(--ink);
+  transform: skew(-4deg) rotate(-1deg) scale(1.04);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.75);
+}
+
+.btn:active {
+  transform: skew(-4deg) rotate(-1deg) scale(0.97);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7);
+}
+
+.btn.red {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.btn.red:hover {
+  background: var(--red);
+  color: var(--ink);
+}
+
+.btn.blue {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.btn.blue:hover {
+  background: var(--blue);
+  color: var(--ink);
+}
+
+.btn.gold {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.btn.gold:hover {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+.btn.sm {
+  font-size: 18px;
+  padding: 5px 22px;
+}
+
+h2.sh {
+  font-family: 'Bangers', cursive;
+  font-size: 42px;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7);
+}
+
+.panel {
+  background: #181310;
+  border: 3px solid var(--paper);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.6);
+  padding: 18px 26px;
+}
+
+.small {
+  font-size: 15px;
+  opacity: 0.8;
+  letter-spacing: 0.14em;
+}
+
+.codebox {
+  font-family: 'Bangers', cursive;
+  font-size: 84px;
+  letter-spacing: 0.35em;
+  padding: 6px 28px 6px 44px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.6);
+  transform: rotate(-1deg);
+}
+
+.pulse {
+  animation: pu 1.4s infinite;
+}
+
+@keyframes pu {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+#joinInput {
+  font-family: 'Bangers', cursive;
+  font-size: 52px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  text-align: center;
+  width: 270px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  padding: 8px 0 4px 12px;
+  outline: none;
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.6);
+}
+
+#nameInput {
+  font-family: 'Bangers', cursive;
+  font-size: 24px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  width: 240px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  padding: 4px 0 2px 8px;
+  outline: none;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+}
+
+.err {
+  color: var(--red);
+  font-weight: 700;
+  min-height: 22px;
+}
+
+#selGrid {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tile {
+  width: 154px;
+  background: #181310;
+  border: 3px solid #4a4238;
+  cursor: pointer;
+  position: relative;
+  padding: 8px 8px 10px;
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.45);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.tile:hover {
+  transform: translateY(-4px);
+  border-color: var(--paper);
+}
+
+.tile.sel0 {
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px var(--red), 5px 5px 0 rgba(0, 0, 0, 0.5);
+}
+
+.tile.sel1 {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px var(--blue), 5px 5px 0 rgba(0, 0, 0, 0.5);
+}
+
+.tile.selB {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold), 5px 5px 0 rgba(0, 0, 0, 0.5);
+}
+
+.tile canvas {
+  display: block;
+  width: 100%;
+  height: 148px;
+  background: #100d0b;
+}
+
+.tile .nm {
+  font-family: 'Bangers', cursive;
+  font-size: 22px;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.tile .tt {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-align: center;
+  opacity: 0.75;
+  font-weight: 700;
+}
+
+.tile .tg {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-3deg);
+  font-family: 'Bangers', cursive;
+  font-size: 14px;
+  padding: 1px 9px;
+  border: 2px solid var(--ink);
+}
+
+.tg.you {
+  background: var(--red);
+  color: var(--ink);
+}
+
+.tg.foe {
+  background: var(--blue);
+  color: var(--ink);
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 3px 0;
+}
+
+.stat b {
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  width: 38px;
+  text-align: left;
+  opacity: 0.8;
+}
+
+.stat .bar {
+  flex: 1;
+  height: 8px;
+  background: #2a251f;
+  position: relative;
+}
+
+.stat .bar i {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: var(--gold);
+}
+
+.keys {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 6px 20px;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.keys kbd {
+  font-family: 'Bangers', cursive;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 2px 8px;
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
+  font-size: 15px;
+}
+
+#toasts {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  font-family: 'Bangers', cursive;
+  font-size: 21px;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 6px 24px;
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.5);
+  transform: rotate(-1deg);
+  animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  from { transform: scale(0.8) translateY(-10px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+#sndBtn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 40;
+  width: 46px;
+  height: 46px;
+  background: rgba(20, 16, 12, 0.7);
+  border: 3px solid var(--paper);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+
+#sndBtn:hover {
+  transform: scale(1.08);
+}
+
+#sndBtn svg {
+  width: 22px;
+  height: 22px;
+  fill: var(--paper);
+}
+
+#touchUI {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  display: none;
+}
+
+#touchUI.on {
+  display: block;
+}
+
+#joy {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  width: 148px;
+  height: 148px;
+  border: 3px solid rgba(242, 234, 216, 0.4);
+  border-radius: 50%;
+  background: rgba(20, 16, 12, 0.35);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+#joyKnob {
+  position: absolute;
+  left: 42px;
+  top: 42px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(242, 234, 216, 0.24);
+  border: 3px solid rgba(242, 234, 216, 0.65);
+}
+
+.tbtn {
+  position: absolute;
+  pointer-events: auto;
+  border-radius: 50%;
+  border: 3px solid rgba(242, 234, 216, 0.45);
+  background: rgba(20, 16, 12, 0.4);
+  font-family: 'Bangers', cursive;
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
+  user-select: none;
+}
+
+.tbtn:active, .tbtn.dn {
+  background: rgba(224, 58, 36, 0.65);
+  transform: scale(0.94);
+}
+
+#rotate {
+  position: fixed;
+  inset: 0;
+  background: #0b0908;
+  z-index: 998;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Bangers', cursive;
+  font-size: 32px;
+  color: var(--gold);
+  text-align: center;
+  padding: 30px;
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+  #rotate { display: flex; }
+}

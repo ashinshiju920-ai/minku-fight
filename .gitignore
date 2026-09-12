@@ -1,0 +1,9 @@
+# Dependencies
+node_modules/
+
+# OS & Temp files
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
