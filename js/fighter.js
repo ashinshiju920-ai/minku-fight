@@ -4,6 +4,18 @@
    MINKU-FIGHT — Fighter State Machine, Physics, Unique Specials & AI
    ========================================================================== */
 
+function safeShake(tr) {
+  if (typeof shake === 'function') {
+    shake(tr);
+  } else if (typeof window !== 'undefined' && typeof window.shake === 'function') {
+    window.shake(tr);
+  } else if (typeof window !== 'undefined' && window.game && window.game.cam) {
+    window.game.cam.tr = Math.min(1, (window.game.cam.tr || 0) + (tr || 0.4));
+  } else if (typeof cam !== 'undefined' && cam) {
+    cam.tr = Math.min(1, (cam.tr || 0) + (tr || 0.4));
+  }
+}
+
 function makeFighter(ci, slot, customName) {
   const ch = CHARS[ci] || CHARS[0];
   return {
@@ -92,9 +104,7 @@ function startMove(f, key) {
       window.game.hitstop = Math.max(window.game.hitstop, 0.45);
       window.game.flash = 0.85;
       window.game.superFreeze = { f: f, t: 0.45 };
-      if (typeof shake === 'function') shake(0.75);
-      else if (window.shake) window.shake(0.75);
-      else if (window.game.cam) window.game.cam.tr = Math.min(1, (window.game.cam.tr || 0) + 0.75);
+      safeShake(0.75);
     }
     fx('su', f.x, GY - 110, 2.0, f.ci);
     sfx('riser');
@@ -381,7 +391,7 @@ function fUpdate(f, o, dt, ctrl) {
         f.state = 'knockdown';
         f.stateT = 0;
         fx('la', f.x, GY, 1.5);
-        shake(0.5);
+        safeShake(0.5);
       }
       break;
     }
@@ -421,7 +431,7 @@ function fUpdate(f, o, dt, ctrl) {
         f.y = 0.12;
         f.vy = -f.vy * 0.36;
         fx('du', f.x, GY, 1.3);
-        shake(0.3);
+        safeShake(0.3);
       } else {
         f.y = 0;
         f.vy = 0;
@@ -439,7 +449,7 @@ function fUpdate(f, o, dt, ctrl) {
     if (Math.abs(f.vx) > 430 && (f.state === 'launched' || f.state === 'thrown')) {
       f.vx = -f.vx * 0.48; // Wall bounce!
       fx('wb', WALL_L, GY - 90, 1.3);
-      shake(0.55);
+      safeShake(0.55);
       sfx('thud');
     } else {
       f.vx = Math.max(0, f.vx);
@@ -450,7 +460,7 @@ function fUpdate(f, o, dt, ctrl) {
     if (Math.abs(f.vx) > 430 && (f.state === 'launched' || f.state === 'thrown')) {
       f.vx = -f.vx * 0.48; // Wall bounce!
       fx('wb', WALL_R, GY - 90, 1.3);
-      shake(0.55);
+      safeShake(0.55);
       sfx('thud');
     } else {
       f.vx = Math.min(0, f.vx);

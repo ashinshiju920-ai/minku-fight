@@ -97,7 +97,7 @@ function pollGamepad(playerIndex) {
 
 // Touch controls setup
 const touch = { le: 0, ri: 0, up: 0, dn: 0, p: 0, k: 0, bl: 0, s1: 0, s2: 0, su: 0, gr: 0 };
-const isTouch = ('ontouchstart' in window) || matchMedia('(pointer:coarse)').matches || (navigator.maxTouchPoints > 0);
+const isTouch = ('ontouchstart' in window) || (typeof window.matchMedia === 'function' && window.matchMedia('(pointer:coarse)').matches) || (navigator.maxTouchPoints > 0);
 
 (function() {
   const joy = document.getElementById('joy'), knob = document.getElementById('joyKnob');
@@ -859,6 +859,7 @@ function fx(k, x, y, s, c) {
     game.evq.push([k, x, y, s, c]);
   }
 }
+window.fx = fx;
 
 function applyFx(k, x, y, s, c) {
   switch (k) {

@@ -4,6 +4,13 @@
    MINKU-FIGHT — Constants, Character Specs, & Animation Tracks
    ========================================================================== */
 
+if (typeof window !== 'undefined' && (!window.performance || !window.performance.now)) {
+  window.performance = window.performance || {};
+  const _perfEpoch = Date.now();
+  window.performance.now = function() { return Date.now() - _perfEpoch; };
+}
+
+
 const TAU = Math.PI * 2, PI = Math.PI;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const lerp = (a, b, k) => a + (b - a) * k;
