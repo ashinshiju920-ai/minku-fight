@@ -184,20 +184,22 @@ const isTouch = ('ontouchstart' in window) || matchMedia('(pointer:coarse)').mat
 
 function localCtrl(playerSlot) {
   const c = { le: 0, ri: 0, up: 0, dn: 0, p: 0, k: 0, bl: 0, s1: 0, s2: 0, su: 0, gr: 0 };
+  const isGuestDevice = (game && game.mode === 'guest') || (net && net.role === 'guest');
   const srcKeys = (playerSlot === 1 && game && game.mode === 'local2p') ? keysP2 : keysP1;
 
   for (const k in srcKeys) {
     if (srcKeys[k] && k in c) c[k] = 1;
   }
 
-  // Check Gamepad
-  const gp = pollGamepad(playerSlot || 0);
+  // Check Gamepad: Gamepad 0 for P1 or for Guest on their own device
+  const gpSlot = (playerSlot === 1 && isGuestDevice) ? 0 : (playerSlot || 0);
+  const gp = pollGamepad(gpSlot);
   for (const k in gp) {
     if (gp[k]) c[k] = 1;
   }
 
-  // P1 gets touch input if coarse pointer
-  if (playerSlot === 0) {
+  // Touch controls apply to P1, or to Guest on their own device
+  if (playerSlot === 0 || (playerSlot === 1 && isGuestDevice)) {
     for (const k in touch) {
       if (k[0] !== '_' && touch[k] && k in c) c[k] = 1;
     }
@@ -2316,9 +2318,14 @@ showScreen('scrTitle');
 
 try {
   const params = new URLSearchParams(location.search);
-  if (params.get('join')) {
-    $('joinInput').value = params.get('join').toUpperCase().slice(0, 4);
+  const jCode = params.get('join');
+  if (jCode && jCode.length >= 4) {
+    const cleanCode = jCode.toUpperCase().slice(0, 4);
+    $('joinInput').value = cleanCode;
     showScreen('scrJoin');
+    setTimeout(() => {
+      joinGo();
+    }, 450);
   }
 } catch (e) {}
 

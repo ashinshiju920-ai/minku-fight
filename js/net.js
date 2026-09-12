@@ -34,8 +34,9 @@ const ICE_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' },
-    { urls: 'stun:stun.chat.bilibili.com:3478' }
+    { urls: 'stun:global.stun.twilio.com:3478' }
   ]
 };
 
@@ -59,8 +60,16 @@ function initPeerJS(id, onReady, onError) {
       onReady(peer, peerId);
     });
 
+    peer.on('disconnected', () => {
+      try {
+        if (!peer.destroyed) {
+          peer.reconnect();
+        }
+      } catch (e) {}
+    });
+
     peer.on('error', err => {
-      console.warn('PeerJS error:', err.type, err);
+      console.warn('PeerJS error:', err ? err.type : err);
       onError(err);
     });
 
@@ -73,12 +82,18 @@ function initPeerJS(id, onReady, onError) {
 function wirePeerConnection(conn) {
   net.pConn = conn;
 
-  conn.on('open', () => {
+  function handleOpen() {
     net.up = true;
     net.mode = 'webrtc';
     stopNetTimers();
     onLinkUp();
-  });
+  }
+
+  if (conn.open) {
+    handleOpen();
+  } else {
+    conn.on('open', handleOpen);
+  }
 
   conn.on('data', data => {
     onLinkMessage(typeof data === 'string' ? data : JSON.stringify(data));
@@ -227,13 +242,18 @@ function hostRoom(onReady, onFail, customCode) {
   net.peer = initPeerJS(
     peerId,
     (peer, id) => {
+      net.serverReady = true;
+      const hs = document.getElementById('hostStatus');
+      if (hs && hs.textContent.includes('CONNECTING')) {
+        hs.textContent = 'WAITING FOR CHALLENGER…';
+      }
       peer.on('connection', conn => {
         wirePeerConnection(conn);
       });
     },
     err => {
       // If ID is already in use (e.g. previous quickmatch host), try joining as guest instead
-      if (err.type === 'unavailable-id' && net.isQuickMatch) {
+      if (err && err.type === 'unavailable-id' && net.isQuickMatch) {
         joinRoom(code, onFail, true);
       }
     }
@@ -276,7 +296,8 @@ function joinRoom(code, onFail, isQuick) {
     gotGame: false,
     inSeq: 0,
     lastSeq: -1,
-    selTimer: null
+    selTimer: null,
+    retried: false
   };
 
   setupBroadcastChannel(code);
@@ -298,6 +319,19 @@ function joinRoom(code, onFail, isQuick) {
     err => {
       console.warn('PeerJS join error:', err ? err.type : err);
       if (err && (err.type === 'peer-unavailable' || err.type === 'invalid-id')) {
+        // Automatic retry once after 850ms to eliminate race condition when host was just starting
+        if (net && !net.retried && !net.up && net.peer && !net.peer.destroyed) {
+          net.retried = true;
+          if (je) je.textContent = 'Contacting host, handshaking…';
+          setTimeout(() => {
+            if (net && !net.up && net.peer && !net.peer.destroyed) {
+              const targetHostId = PEER_PREFIX + code.toLowerCase();
+              const conn = net.peer.connect(targetHostId, { reliable: true });
+              wirePeerConnection(conn);
+            }
+          }, 850);
+          return;
+        }
         if (net && !net.up) {
           clearTimeout(net.failTimer);
           teardownNet();
@@ -329,9 +363,7 @@ function joinRoom(code, onFail, isQuick) {
    ========================================================================== */
 function quickMatch(onStatus, onFail) {
   onStatus('SEARCHING FOR OPPONENT…');
-  // Attempt to join the global quickmatch room
   joinRoom(QUICK_MATCH_ROOM, () => {
-    // If no host exists, host the room and wait for the next player!
     onStatus('HOSTING MATCH — WAITING FOR RIVAL…');
     hostRoom(
       () => {},
@@ -349,19 +381,26 @@ function netSend(o) {
   let s = '';
   try { s = JSON.stringify(o); } catch (e) { return; }
 
-  // 1. BroadcastChannel (Same Device / Multi-Tab)
-  if (net.bc) {
-    try { net.bc.postMessage(s); } catch (e) {}
-  }
-
-  // 2. Direct WebRTC DataChannel (Global P2P via PeerJS)
-  if (net.pConn && net.pConn.open) {
+  // If a specific mode is already active and verified, use it directly
+  if (net.mode === 'webrtc' && net.pConn && net.pConn.open) {
     try { net.pConn.send(s); return; } catch (e) {}
   }
-
-  // 3. Local Wi-Fi WebSocket (Local Router)
-  if (net.localWs && net.localWs.readyState === WebSocket.OPEN) {
+  if (net.mode === 'local_ws' && net.localWs && net.localWs.readyState === WebSocket.OPEN) {
     try { net.localWs.send(s); return; } catch (e) {}
+  }
+  if (net.mode === 'broadcast' && net.bc) {
+    try { net.bc.postMessage(s); return; } catch (e) {}
+  }
+
+  // Fallback / initial discovery: broadcast across all open channels
+  if (net.pConn && net.pConn.open) {
+    try { net.pConn.send(s); } catch (e) {}
+  }
+  if (net.localWs && net.localWs.readyState === WebSocket.OPEN) {
+    try { net.localWs.send(s); } catch (e) {}
+  }
+  if (net.bc) {
+    try { net.bc.postMessage(s); } catch (e) {}
   }
 }
 
@@ -376,7 +415,11 @@ function onLinkMessage(str) {
 
   if (!net.up) {
     net.up = true;
-    net.mode = net.localWs ? 'local_ws' : 'broadcast';
+    if (!net.mode) {
+      if (net.pConn && net.pConn.open) net.mode = 'webrtc';
+      else if (net.localWs && net.localWs.readyState === WebSocket.OPEN) net.mode = 'local_ws';
+      else net.mode = 'broadcast';
+    }
     stopNetTimers();
     onLinkUp();
   }
@@ -393,16 +436,32 @@ function onLinkUp() {
     const hs = document.getElementById('hostStatus');
     if (hs) hs.textContent = 'CHALLENGER CONNECTED!';
 
+    let togTries = 0;
+    const sendTog = () => {
+      if (!net || !net.up) return;
+      if (window.game && window.game.online) return;
+      netSend({ t: 'togsel' });
+      if (++togTries < 6 && (!net.guestInSel)) {
+        setTimeout(sendTog, 250);
+      }
+    };
+
     setTimeout(() => {
       if (!net || !net.up) return;
       if (window.game && window.game.online) return;
       showScreen('scrSelect');
       selSetup('host');
-      netSend({ t: 'togsel' });
-    }, 300);
+      sendTog();
+    }, 200);
   } else {
     const je = document.getElementById('joinErr');
     if (je) je.textContent = 'Connected to host! Entering selection…';
+    setTimeout(() => {
+      if (!net || !net.up) return;
+      showScreen('scrSelect');
+      selSetup('guest');
+      netSend({ t: 'togsel_ack' });
+    }, 200);
   }
 }
 
@@ -457,6 +516,20 @@ function onNetData(d) {
     case 'togsel':
       showScreen('scrSelect');
       selSetup('guest');
+      netSend({ t: 'togsel_ack' });
+      break;
+    case 'togsel_ack':
+      if (net) net.guestInSel = true;
+      break;
+    case 'start':
+      netSend({ t: 'start_ack' });
+      if (net.gotStart) break;
+      net.gotStart = true;
+      destroyGameUI();
+      createGame({ mode: net.role, chars: d.chars, names: d.names });
+      break;
+    case 'start_ack':
+      // Host received guest start confirmation
       break;
     case 'sel':
       selRemote(d.i, d.r, d.name);
