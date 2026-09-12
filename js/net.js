@@ -48,8 +48,10 @@ function initPeerJS(id, onReady, onError) {
   }
 
   try {
+    const isHttps = (location.protocol === 'https:');
     const peer = new Peer(id, {
       debug: 1,
+      secure: isHttps,
       config: ICE_CONFIG
     });
 
@@ -97,8 +99,38 @@ function wirePeerConnection(conn) {
 /* ==========================================================================
    2. Local Wi-Fi WebSocket (When running via Node server.js)
    ========================================================================== */
+function isLocalHost() {
+  const h = location.hostname;
+  return (
+    h === 'localhost' ||
+    h === '127.0.0.1' ||
+    h === '[::1]' ||
+    h.startsWith('192.168.') ||
+    h.startsWith('10.') ||
+    h.startsWith('172.16.') ||
+    h.startsWith('172.17.') ||
+    h.startsWith('172.18.') ||
+    h.startsWith('172.19.') ||
+    h.startsWith('172.20.') ||
+    h.startsWith('172.21.') ||
+    h.startsWith('172.22.') ||
+    h.startsWith('172.23.') ||
+    h.startsWith('172.24.') ||
+    h.startsWith('172.25.') ||
+    h.startsWith('172.26.') ||
+    h.startsWith('172.27.') ||
+    h.startsWith('172.28.') ||
+    h.startsWith('172.29.') ||
+    h.startsWith('172.30.') ||
+    h.startsWith('172.31.') ||
+    h.endsWith('.local')
+  );
+}
+window.isLocalHost = isLocalHost;
+
 function connectLocalWs(code, role, onOpen, onFail) {
   if (!location.protocol.startsWith('http')) return onFail('Not HTTP');
+  if (!isLocalHost()) return onFail('Skipping local WS (Cloudflare / static host)');
 
   try {
     const wsProto = (location.protocol === 'https:') ? 'wss:' : 'ws:';
@@ -127,7 +159,7 @@ function connectLocalWs(code, role, onOpen, onFail) {
     ws.onerror = () => {
       if (!opened) {
         clearTimeout(to);
-        onFail('Local WS unavailable (Cloudflare / Static Host)');
+        onFail('Local WS unavailable');
       }
     };
 
@@ -207,13 +239,13 @@ function hostRoom(onReady, onFail, customCode) {
     }
   );
 
-  // 2. Also try Local Wi-Fi WebSocket if hosted on local server
-  connectLocalWs(code, 'host', ws => {
-    if (!net) return;
-    net.localWs = ws;
-  }, () => {
-    // Expected on Cloudflare Pages (pure static host)
-  });
+  // 2. Also try Local Wi-Fi WebSocket ONLY if hosted on local Node server
+  if (isLocalHost()) {
+    connectLocalWs(code, 'host', ws => {
+      if (!net) return;
+      net.localWs = ws;
+    }, () => {});
+  }
 }
 
 /* ==========================================================================
@@ -264,15 +296,24 @@ function joinRoom(code, onFail, isQuick) {
       wirePeerConnection(conn);
     },
     err => {
-      console.warn('PeerJS join error:', err);
+      console.warn('PeerJS join error:', err ? err.type : err);
+      if (err && (err.type === 'peer-unavailable' || err.type === 'invalid-id')) {
+        if (net && !net.up) {
+          clearTimeout(net.failTimer);
+          teardownNet();
+          onFail(`Room "${code}" not found. Make sure Player 1 clicked HOST and you entered the exact 4 letters.`);
+        }
+      }
     }
   );
 
-  // 2. Also try Local Wi-Fi WebSocket if on local server
-  connectLocalWs(code, 'guest', ws => {
-    if (!net) return;
-    net.localWs = ws;
-  }, () => {});
+  // 2. Also try Local Wi-Fi WebSocket ONLY if on local server
+  if (isLocalHost()) {
+    connectLocalWs(code, 'guest', ws => {
+      if (!net) return;
+      net.localWs = ws;
+    }, () => {});
+  }
 
   // Fallback timeout with helpful instructions
   net.failTimer = setTimeout(() => {

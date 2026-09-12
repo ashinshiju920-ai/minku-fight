@@ -1882,36 +1882,43 @@ $('btnHost').onclick = () => {
       $('hostCode').textContent = code;
       $('hostStatus').textContent = 'WAITING FOR CHALLENGER…';
 
-      // Fetch host's local Wi-Fi IP address from server
-      fetch('/api/info')
-        .then(r => r.json())
-        .then(info => {
-          const primaryIp = info.primaryIp || location.hostname;
-          const port = info.port || location.port || 8080;
-          const joinUrl = `${location.protocol}//${primaryIp}:${port}?join=${code}`;
-          if (urlBox) urlBox.textContent = joinUrl;
-          if (window.renderQR) {
-            window.renderQR(joinUrl, document.getElementById('hostQr'));
-          }
-          const copyBtn = $('btnCopyWifiLink');
-          if (copyBtn) {
-            copyBtn.onclick = () => {
-              sfx('ok');
-              if (navigator.clipboard) {
-                navigator.clipboard.writeText(joinUrl).then(() => toast('LINK COPIED TO CLIPBOARD!'));
-              } else {
-                toast('OPEN: ' + joinUrl);
-              }
-            };
-          }
-        })
-        .catch(() => {
-          const fallbackUrl = `${location.origin}?join=${code}`;
-          if (urlBox) urlBox.textContent = fallbackUrl;
-          if (window.renderQR) {
-            window.renderQR(fallbackUrl, document.getElementById('hostQr'));
-          }
-        });
+      function setupJoinLink(joinUrl) {
+        if (urlBox) urlBox.textContent = joinUrl;
+        if (window.renderQR) {
+          window.renderQR(joinUrl, document.getElementById('hostQr'));
+        }
+        const copyBtn = $('btnCopyWifiLink');
+        if (copyBtn) {
+          copyBtn.onclick = () => {
+            sfx('ok');
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(joinUrl).then(() => toast('LINK COPIED TO CLIPBOARD!'));
+            } else {
+              toast('OPEN: ' + joinUrl);
+            }
+          };
+        }
+      }
+
+      // If running locally on Node server.js, fetch LAN IP for local Wi-Fi pairing
+      if (window.isLocalHost && window.isLocalHost()) {
+        fetch('/api/info')
+          .then(r => r.json())
+          .then(info => {
+            const primaryIp = info.primaryIp || location.hostname;
+            const port = info.port || location.port || 8080;
+            const joinUrl = `${location.protocol}//${primaryIp}:${port}?join=${code}`;
+            setupJoinLink(joinUrl);
+          })
+          .catch(() => {
+            const fallbackUrl = `${location.origin}${location.pathname}?join=${code}`;
+            setupJoinLink(fallbackUrl);
+          });
+      } else {
+        // Cloudflare / Internet host - use direct public URL
+        const cloudUrl = `${location.origin}${location.pathname}?join=${code}`;
+        setupJoinLink(cloudUrl);
+      }
     },
     err => {
       toast(err);
