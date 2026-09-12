@@ -25,21 +25,34 @@
 
 html, body {
   height: 100%;
+  height: 100dvh;
   width: 100%;
+  width: 100dvw;
   overflow: hidden;
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
   background: #0b0908;
   font-family: 'Rajdhani', sans-serif;
   color: var(--paper);
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 #app {
   position: fixed;
   inset: 0;
+  height: 100%;
+  height: 100dvh;
+  width: 100%;
+  width: 100dvw;
   display: flex;
   align-items: center;
   justify-content: center;
   touch-action: none;
+  overscroll-behavior: none;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -47,6 +60,10 @@ html, body {
 canvas#cv {
   display: block;
   box-shadow: 0 0 35px rgba(0, 0, 0, 0.85);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  image-rendering: -webkit-optimize-contrast;
 }
 
 #errBox {
@@ -690,9 +707,80 @@ h2.sh {
 .tbtn-su:active .tb-name, .tbtn-su.dn .tb-name { color: var(--ink); }
 
 @media (max-height: 480px) {
-  #joyZone { width: 140px; height: 140px; }
+  #joyZone {
+    width: 140px;
+    height: 140px;
+    left: calc(14px + var(--sal));
+    bottom: calc(12px + var(--sab));
+  }
   #joyKnob { left: 42px; top: 42px; width: 56px; height: 56px; }
-  #btnCluster { transform: scale(0.85); transform-origin: bottom right; }
+  #btnCluster {
+    transform: scale(0.85);
+    transform-origin: bottom right;
+    right: calc(12px + var(--sar));
+    bottom: calc(10px + var(--sab));
+  }
+  #topBar {
+    top: calc(8px + var(--sat));
+    right: calc(8px + var(--sar));
+  }
+  #topBar button {
+    width: 44px;
+    height: 44px;
+  }
+  #selGrid {
+    gap: 8px;
+  }
+  .tile {
+    width: 116px;
+    padding: 4px;
+  }
+  .tile canvas {
+    width: 104px;
+    height: 108px;
+  }
+  .tile .nm {
+    font-size: 18px;
+  }
+  .tile .tt {
+    font-size: 11px;
+  }
+  #selInfo {
+    padding: 6px 14px;
+    min-width: 260px;
+  }
+  #scrSelect {
+    padding: 6px;
+    gap: 6px;
+    overflow-y: auto;
+  }
+  h1.logo {
+    font-size: clamp(38px, 8vw, 76px);
+  }
+}
+
+@media (max-height: 400px) {
+  #joyZone {
+    width: 125px;
+    height: 125px;
+    left: calc(8px + var(--sal));
+    bottom: calc(6px + var(--sab));
+  }
+  #joyKnob { left: 36px; top: 36px; width: 52px; height: 52px; }
+  #btnCluster {
+    transform: scale(0.76);
+    transform-origin: bottom right;
+    right: calc(6px + var(--sar));
+    bottom: calc(4px + var(--sab));
+  }
+  .tile {
+    width: 100px;
+    padding: 3px;
+  }
+  .tile canvas {
+    width: 90px;
+    height: 94px;
+  }
 }
 
 /* ==========================================================================

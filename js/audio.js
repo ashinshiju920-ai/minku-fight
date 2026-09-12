@@ -62,17 +62,27 @@ function audioInit() {
   }
 }
 
-// Auto-unlock AudioContext on first user gesture for mobile iOS Safari & Chrome
+// Auto-unlock AudioContext on user gesture & re-unlock when returning to tab for Mobile Chrome & Safari
 (function() {
-  const unlockEvents = ['pointerdown', 'touchstart', 'keydown', 'click'];
+  const unlockEvents = ['pointerdown', 'touchstart', 'touchend', 'keydown', 'click'];
   function unlock() {
     audioInit();
     if (actx && actx.state === 'suspended') {
       actx.resume().catch(() => {});
     }
-    unlockEvents.forEach(evt => window.removeEventListener(evt, unlock, { capture: true }));
   }
-  unlockEvents.forEach(evt => window.addEventListener(evt, unlock, { capture: true, passive: true }));
+  unlockEvents.forEach(evt => window.addEventListener(evt, unlock, { passive: true }));
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && actx && actx.state === 'suspended') {
+      actx.resume().catch(() => {});
+    }
+  });
+  window.addEventListener('focus', () => {
+    if (actx && actx.state === 'suspended') {
+      actx.resume().catch(() => {});
+    }
+  });
 })();
 
 function envG(g, t, a, peak, dur) {

@@ -1,0 +1,26 @@
+{
+  "name": "MINKU-FIGHT — Stick Duel",
+  "short_name": "MINKU-FIGHT",
+  "description": "Fast-paced martial arts stick fighting duel game with fluid skeletal combat, local 2-player, training dojo, and Wi-Fi WebRTC duels.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "landscape",
+  "theme_color": "#0b0908",
+  "background_color": "#0b0908",
+  "categories": ["games", "action"],
+  "icons": [
+    {
+      "src": "assets/victory.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
