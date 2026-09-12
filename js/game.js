@@ -844,8 +844,12 @@ function resolveHit(g, att, vic, w, hit, away) {
 
 /* ============ Visual FX & Particles ============ */
 function shake(a) {
-  if (game) game.cam.tr = Math.min(1, game.cam.tr + a);
+  if (game && game.cam) game.cam.tr = Math.min(1, (game.cam.tr || 0) + (a || 0.4));
 }
+window.shake = shake;
+window.camShake = function(cam, amp, dur) {
+  shake(amp ? Math.min(1, amp * 0.05) : 0.75);
+};
 
 function fx(k, x, y, s, c) {
   s = (s === undefined) ? 1 : s;

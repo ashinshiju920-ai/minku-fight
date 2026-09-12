@@ -92,7 +92,9 @@ function startMove(f, key) {
       window.game.hitstop = Math.max(window.game.hitstop, 0.45);
       window.game.flash = 0.85;
       window.game.superFreeze = { f: f, t: 0.45 };
-      if (window.game.cam) camShake(window.game.cam, 16, 0.35);
+      if (typeof shake === 'function') shake(0.75);
+      else if (window.shake) window.shake(0.75);
+      else if (window.game.cam) window.game.cam.tr = Math.min(1, (window.game.cam.tr || 0) + 0.75);
     }
     fx('su', f.x, GY - 110, 2.0, f.ci);
     sfx('riser');
