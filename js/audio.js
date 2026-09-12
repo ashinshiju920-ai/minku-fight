@@ -322,4 +322,6 @@ function setMute(m) {
   muted = m;
   const ico = document.getElementById('sndIco');
   if (ico) ico.style.opacity = m ? 0.35 : 1;
+  const lbl = document.getElementById('pauseSoundLabel');
+  if (lbl) lbl.textContent = m ? '🔇 SOUND: MUTED' : '🔊 SOUND: ON';
 }

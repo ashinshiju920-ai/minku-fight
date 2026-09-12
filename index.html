@@ -25,14 +25,26 @@
 
 <div id="errBox"></div>
 
-<!-- Top Utility Controls (Fullscreen & Audio) -->
+<!-- Top Utility Controls (In-Game Menu, Screen Size, Fullscreen & Audio) -->
 <div id="topBar">
-  <button id="fsBtn" title="Toggle Fullscreen (F)" aria-label="Fullscreen">
+  <button id="menuBtn" class="top-bar-btn btn-menu" title="In-Game Menu & Settings (ESC)" aria-label="Menu">
+    <svg viewBox="0 0 24 24">
+      <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+    </svg>
+    <span class="top-btn-label">MENU</span>
+  </button>
+  <button id="screenSizeBtn" class="top-bar-btn" title="Cycle Screen Size Mode" aria-label="Screen Size">
+    <svg viewBox="0 0 24 24">
+      <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-10-7h9v6h-9z"/>
+    </svg>
+    <span id="screenSizeLabel" class="top-btn-label">FIT</span>
+  </button>
+  <button id="fsBtn" class="top-bar-btn" title="Toggle Fullscreen (F)" aria-label="Fullscreen">
     <svg viewBox="0 0 24 24">
       <path id="fsIco" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
     </svg>
   </button>
-  <button id="sndBtn" title="Toggle Sound (M)" aria-label="Toggle Sound">
+  <button id="sndBtn" class="top-bar-btn" title="Toggle Sound (M)" aria-label="Toggle Sound">
     <svg viewBox="0 0 24 24">
       <path id="sndIco" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/>
     </svg>
@@ -107,6 +119,7 @@
     <button class="btn" id="btnDojo">TRAINING DOJO</button>
     <button class="btn" id="btnHost">HOST DUEL (ROOM CODE)</button>
     <button class="btn" id="btnJoin">JOIN DUEL</button>
+    <button class="btn sm" id="btnTitleScreenSize">📺 SCREEN: FIT (16:9)</button>
     <button class="btn sm" id="btnHow">HOW TO PLAY</button>
   </div>
   <div class="small" style="margin-top:8px">GLOBAL P2P · CLOUDFLARE READY · ROOM CODE · GAMEPAD SUPPORT</div>
@@ -242,21 +255,46 @@
   </div>
 </div>
 
-<!-- Screen 7: Pause Menu & Training Settings -->
+<!-- Screen 7: In-Game Battle Menu & Settings -->
 <div class="scr" id="scrPause" hidden>
-  <h2 class="sh">PAUSED</h2>
-  <div id="dojoControls" style="display:none;flex-direction:column;gap:10px;margin-bottom:12px">
-    <div style="font-family:Bangers;color:var(--gold);font-size:22px">TRAINING SETTINGS</div>
-    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-      <button class="btn sm" id="btnDummyMode">DUMMY: STAND</button>
-      <button class="btn sm" id="btnInfMeter">INF METER: ON</button>
-      <button class="btn sm" id="btnResetPos">RESET POS</button>
-      <button class="btn sm red" id="btnFinishDojo">CLAIM VICTORY</button>
+  <div class="pause-card">
+    <h2 class="sh" style="margin-bottom:2px">BATTLE MENU</h2>
+    <div id="pauseModeBadge" class="pause-badge">MATCH PAUSED</div>
+
+    <!-- Quick Settings: Screen Size, Fullscreen, Audio -->
+    <div class="pause-settings-box">
+      <div class="pause-section-title">DISPLAY & AUDIO SETTINGS</div>
+      <div class="pause-setting-row">
+        <button class="btn sm gold" id="btnPauseScreenSize">
+          <span id="pauseScreenSizeLabel">📺 SCREEN: FIT (16:9)</span>
+        </button>
+        <button class="btn sm" id="btnPauseFs">
+          <span id="pauseFsLabel">⛶ FULLSCREEN</span>
+        </button>
+        <button class="btn sm" id="btnPauseSound">
+          <span id="pauseSoundLabel">🔊 SOUND: ON</span>
+        </button>
+      </div>
+      <div id="screenSizeHint" class="pause-hint">On mobile phones, choose FILL (wide) or ZOOM (no black bars)</div>
     </div>
-  </div>
-  <div style="display:flex;gap:12px">
-    <button class="btn" id="btnResume">RESUME</button>
-    <button class="btn sm" id="btnQuit">QUIT MATCH</button>
+
+    <!-- Training Settings (Visible in Dojo mode) -->
+    <div id="dojoControls" style="display:none;flex-direction:column;gap:8px;width:100%">
+      <div class="pause-section-title" style="color:var(--gold)">DOJO TRAINING SETTINGS</div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button class="btn sm" id="btnDummyMode">DUMMY: STAND</button>
+        <button class="btn sm" id="btnInfMeter">INF METER: ON</button>
+        <button class="btn sm" id="btnResetPos">RESET POS</button>
+        <button class="btn sm red" id="btnFinishDojo">CLAIM VICTORY</button>
+      </div>
+    </div>
+
+    <!-- Main Navigation Actions -->
+    <div class="pause-actions">
+      <button class="btn gold" id="btnResume" style="min-width:180px">▶ RESUME MATCH</button>
+      <button class="btn" id="btnPauseSelect">↺ CHANGE FIGHTER</button>
+      <button class="btn sm red" id="btnQuit">✖ MAIN MENU</button>
+    </div>
   </div>
 </div>
 

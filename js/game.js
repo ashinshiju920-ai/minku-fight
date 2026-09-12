@@ -1656,13 +1656,78 @@ const ctx = cv.getContext('2d', {
   desynchronized: true
 });
 
+/* ============ Responsive Screen Sizing & Aspect Ratio Control ============ */
+let screenFitMode = 'fit';
+try {
+  screenFitMode = localStorage.getItem('minku_screen_fit') || 'fit';
+} catch (e) {}
+
+function getScreenFitLabel(mode) {
+  switch (mode) {
+    case 'fit': return 'FIT (16:9)';
+    case 'fill': return 'FILL (100% WIDE)';
+    case 'zoom': return 'ZOOM (NO BARS)';
+    case 'compact': return 'COMPACT (90%)';
+    default: return 'FIT (16:9)';
+  }
+}
+
+function updateScreenFitUI() {
+  const shortMode = (screenFitMode === 'fit' ? 'FIT' : screenFitMode === 'fill' ? 'FILL' : screenFitMode === 'zoom' ? 'ZOOM' : 'COMP');
+  const fullLabel = getScreenFitLabel(screenFitMode);
+
+  const topLabel = $('screenSizeLabel');
+  if (topLabel) topLabel.textContent = shortMode;
+
+  const pauseLabel = $('pauseScreenSizeLabel');
+  if (pauseLabel) pauseLabel.textContent = '📺 SCREEN: ' + fullLabel;
+
+  const titleBtn = $('btnTitleScreenSize');
+  if (titleBtn) titleBtn.textContent = '📺 SCREEN: ' + fullLabel;
+}
+
+function setScreenFitMode(mode) {
+  screenFitMode = mode;
+  try { localStorage.setItem('minku_screen_fit', mode); } catch (e) {}
+  fit();
+  updateScreenFitUI();
+}
+
+function cycleScreenFitMode() {
+  const modes = ['fit', 'fill', 'zoom', 'compact'];
+  const curIdx = modes.indexOf(screenFitMode);
+  const nextMode = modes[(curIdx + 1) % modes.length];
+  setScreenFitMode(nextMode);
+  sfx('ui');
+  if (window.haptic) window.haptic('light');
+  toast('SCREEN: ' + getScreenFitLabel(nextMode));
+}
+
 function fit() {
   const vp = window.visualViewport;
   const ww = vp ? vp.width : window.innerWidth;
   const wh = vp ? vp.height : window.innerHeight;
-  const s = Math.min(ww / W, wh / H);
-  cv.style.width = Math.floor(W * s) + 'px';
-  cv.style.height = Math.floor(H * s) + 'px';
+
+  if (screenFitMode === 'fill') {
+    // 100% width and height — stretches horizontally to fill modern ultra-wide mobile phones (19.5:9, 20:9, 21:9)
+    cv.style.width = Math.floor(ww) + 'px';
+    cv.style.height = Math.floor(wh) + 'px';
+  } else if (screenFitMode === 'zoom') {
+    // Fills entire display without letterbox black bars, keeping 16:9 ratio and cropping minor borders
+    const s = Math.max(ww / W, wh / H);
+    cv.style.width = Math.floor(W * s) + 'px';
+    cv.style.height = Math.floor(H * s) + 'px';
+  } else if (screenFitMode === 'compact') {
+    // 90% scale for notched screens, punch-hole cameras, and curved mobile glass
+    const s = Math.min(ww / W, wh / H) * 0.90;
+    cv.style.width = Math.floor(W * s) + 'px';
+    cv.style.height = Math.floor(H * s) + 'px';
+  } else {
+    // Default 'fit': exact 16:9 letterbox/pillarbox
+    const s = Math.min(ww / W, wh / H);
+    cv.style.width = Math.floor(W * s) + 'px';
+    cv.style.height = Math.floor(H * s) + 'px';
+  }
 }
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', fit);
@@ -1674,6 +1739,7 @@ addEventListener('orientationchange', () => {
   setTimeout(fit, 320);
 });
 fit();
+setTimeout(updateScreenFitUI, 50);
 
 if (document.fonts && document.fonts.load) document.fonts.load('80px Bangers');
 
@@ -1890,16 +1956,61 @@ function startAttract() {
   createGame({ mode: 'attract', chars: [Math.random() * 4 | 0, Math.random() * 4 | 0] });
 }
 
+function openInGameMenu() {
+  sfx('ui');
+  if (window.haptic) window.haptic('light');
+  const g = game;
+  if (!g || g.attract) {
+    showScreen('scrPause');
+    const badge = $('pauseModeBadge');
+    if (badge) badge.textContent = 'GAME SETTINGS';
+    updateScreenFitUI();
+    return;
+  }
+  if (!$('scrEnd').hidden) return;
+
+  if (g.mode === 'cpu' || g.mode === 'local2p' || g.mode === 'dojo') {
+    g.paused = true;
+    const badge = $('pauseModeBadge');
+    if (badge) badge.textContent = 'MATCH PAUSED';
+  } else if (g.online) {
+    // Online duels run real-time in background
+    const badge = $('pauseModeBadge');
+    if (badge) badge.textContent = 'ONLINE DUEL (LIVE)';
+  }
+
+  // Show dojo controls only in training dojo mode
+  const dojoDiv = $('dojoControls');
+  if (dojoDiv) dojoDiv.style.display = (g.mode === 'dojo') ? 'flex' : 'none';
+
+  // Temporarily hide touch controls so they don't overlap the pause dialog
+  const tui = $('touchUI');
+  if (tui) tui.classList.remove('on');
+
+  $('scrPause').hidden = false;
+  updateScreenFitUI();
+}
+
+function resumeMatch() {
+  sfx('ok');
+  if (window.haptic) window.haptic('light');
+  if (game && !game.online) {
+    game.paused = false;
+  }
+  $('scrPause').hidden = true;
+  const tui = $('touchUI');
+  if (tui) tui.classList.toggle('on', isTouch && game && game.phase === 'fight');
+}
+
 function onEsc() {
   const g = game;
   if (!g || g.attract) return;
   if (!$('scrEnd').hidden) return;
 
-  if (g.mode === 'cpu' || g.mode === 'local2p' || g.mode === 'dojo') {
-    g.paused = !g.paused;
-    $('scrPause').hidden = !g.paused;
-  } else if (g.online) {
-    $('scrLeave').hidden = false;
+  if (!$('scrPause').hidden) {
+    resumeMatch();
+  } else {
+    openInGameMenu();
   }
 }
 
@@ -2383,15 +2494,64 @@ $('joinInput').addEventListener('input', function() {
 });
 
 $('btnJoinCancel').onclick = () => { sfx('ui'); teardownNet(); showScreen('scrTitle'); };
-$('btnResume').onclick = () => { if (game) game.paused = false; $('scrPause').hidden = true; };
+
+$('btnResume').onclick = resumeMatch;
+
 $('btnQuit').onclick = () => {
-  game = null;
+  sfx('ui');
   $('scrPause').hidden = true;
-  startAttract();
-  showScreen('scrTitle');
-  const tui = $('touchUI');
-  if (tui) tui.classList.remove('on');
+  if (game && game.mode === 'host' && net) netSend({ t: 'endchoice', a: 'menu' });
+  else if (game && game.online && net) netSend({ t: 'bye' });
+  leaveToTitle();
 };
+
+const pauseSelect = $('btnPauseSelect');
+if (pauseSelect) {
+  pauseSelect.onclick = () => {
+    sfx('ui');
+    $('scrPause').hidden = true;
+    if (game && game.mode === 'host' && net) netSend({ t: 'endchoice', a: 'select' });
+    else if (game && game.online && net) netSend({ t: 'bye' });
+    teardownNet();
+    const mode = game ? (game.mode === 'guest' ? 'host' : game.mode) : 'cpu';
+    destroyGameUI();
+    showScreen('scrSelect');
+    selSetup(mode === 'host' ? 'cpu' : mode);
+    game = null;
+    startAttract();
+  };
+}
+
+const menuBtn = $('menuBtn');
+if (menuBtn) {
+  menuBtn.onclick = () => {
+    if (!$('scrPause').hidden) {
+      resumeMatch();
+    } else {
+      openInGameMenu();
+    }
+  };
+}
+
+const ssBtn = $('screenSizeBtn');
+if (ssBtn) ssBtn.onclick = cycleScreenFitMode;
+
+const pauseSsBtn = $('btnPauseScreenSize');
+if (pauseSsBtn) pauseSsBtn.onclick = cycleScreenFitMode;
+
+const titleSsBtn = $('btnTitleScreenSize');
+if (titleSsBtn) titleSsBtn.onclick = cycleScreenFitMode;
+
+const pauseFsBtn = $('btnPauseFs');
+if (pauseFsBtn) pauseFsBtn.onclick = toggleAppFullscreen;
+
+const pauseSndBtn = $('btnPauseSound');
+if (pauseSndBtn) {
+  pauseSndBtn.onclick = () => {
+    audioInit();
+    setMute(!muted);
+  };
+}
 
 $('btnLeaveYes').onclick = () => {
   if (net) netSend({ t: 'bye', tok: net.tok });
@@ -2480,57 +2640,119 @@ async function acquireWakeLock() {
   }
 }
 
+function isFullscreen() {
+  return !!(
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.mozFullScreenElement ||
+    document.msFullscreenElement ||
+    document.body.classList.contains('virtual-fullscreen')
+  );
+}
+
+async function requestAppFullscreen() {
+  const docEl = document.documentElement;
+  let nativeFsWorked = false;
+
+  try {
+    if (docEl.requestFullscreen) {
+      await docEl.requestFullscreen({ navigationUI: 'hide' });
+      nativeFsWorked = true;
+    } else if (docEl.webkitRequestFullscreen) {
+      await docEl.webkitRequestFullscreen();
+      nativeFsWorked = true;
+    } else if (docEl.mozRequestFullScreen) {
+      await docEl.mozRequestFullScreen();
+      nativeFsWorked = true;
+    } else if (docEl.msRequestFullscreen) {
+      await docEl.msRequestFullscreen();
+      nativeFsWorked = true;
+    }
+  } catch (err) {
+    // Fall back to virtual fullscreen if rejected or restricted
+  }
+
+  // Automatic landscape orientation lock on mobile
+  try {
+    if (screen.orientation && screen.orientation.lock) {
+      await screen.orientation.lock('landscape').catch(() => {});
+    }
+  } catch (e) {}
+
+  // Fallback for iOS Safari (which restricts requestFullscreen to video elements) and embedded iframes
+  if (!nativeFsWorked || !document.fullscreenElement) {
+    document.body.classList.add('virtual-fullscreen');
+    window.scrollTo(0, 1);
+  }
+
+  acquireWakeLock();
+  setTimeout(fit, 60);
+  setTimeout(fit, 250);
+  updateFsIcon();
+}
+
+async function exitAppFullscreen() {
+  document.body.classList.remove('virtual-fullscreen');
+
+  try {
+    if (document.exitFullscreen) {
+      await document.exitFullscreen().catch(() => {});
+    } else if (document.webkitExitFullscreen) {
+      await document.webkitExitFullscreen().catch(() => {});
+    } else if (document.mozCancelFullScreen) {
+      await document.mozCancelFullScreen().catch(() => {});
+    } else if (document.msExitFullscreen) {
+      await document.msExitFullscreen().catch(() => {});
+    }
+  } catch (e) {}
+
+  try {
+    if (screen.orientation && screen.orientation.unlock) {
+      screen.orientation.unlock();
+    }
+  } catch (e) {}
+
+  setTimeout(fit, 60);
+  setTimeout(fit, 250);
+  updateFsIcon();
+}
+
+function toggleAppFullscreen() {
+  sfx('ui');
+  if (window.haptic) window.haptic('light');
+  if (!isFullscreen()) {
+    requestAppFullscreen();
+  } else {
+    exitAppFullscreen();
+  }
+}
+
+function updateFsIcon() {
+  const isFs = isFullscreen();
+  const ico = $('fsIco');
+  if (ico) {
+    ico.setAttribute('d', isFs
+      ? 'M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z'
+      : 'M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z');
+  }
+  const pauseFs = $('pauseFsLabel');
+  if (pauseFs) {
+    pauseFs.textContent = isFs ? '🗗 EXIT FULLSCREEN' : '⛶ FULLSCREEN';
+  }
+  fit();
+}
+
 function setupFullscreen() {
   const fsBtn = $('fsBtn');
   const rotateFs = $('btnRotateFs');
 
-  async function enterLandscapeFs() {
-    sfx('ui');
-    if (window.haptic) window.haptic('light');
-    const docEl = document.documentElement;
-    try {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        if (docEl.requestFullscreen) await docEl.requestFullscreen();
-        else if (docEl.webkitRequestFullscreen) await docEl.webkitRequestFullscreen();
-      }
-      if (screen.orientation && screen.orientation.lock) {
-        await screen.orientation.lock('landscape').catch(() => {});
-      }
-      acquireWakeLock();
-    } catch (e) {}
-    fit();
-  }
-
-  function toggleFs() {
-    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-      enterLandscapeFs();
-    } else {
-      sfx('ui');
-      if (window.haptic) window.haptic('light');
-      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-      else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(() => {});
-      if (screen.orientation && screen.orientation.unlock) {
-        screen.orientation.unlock();
-      }
-    }
-  }
-
-  if (fsBtn) fsBtn.onclick = toggleFs;
-  if (rotateFs) rotateFs.onclick = enterLandscapeFs;
-
-  function updateFsIcon() {
-    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-    const ico = $('fsIco');
-    if (ico) {
-      ico.setAttribute('d', isFs
-        ? 'M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z'
-        : 'M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z');
-    }
-    fit();
-  }
+  if (fsBtn) fsBtn.onclick = toggleAppFullscreen;
+  if (rotateFs) rotateFs.onclick = requestAppFullscreen;
 
   document.addEventListener('fullscreenchange', updateFsIcon);
   document.addEventListener('webkitfullscreenchange', updateFsIcon);
+  document.addEventListener('mozfullscreenchange', updateFsIcon);
+  document.addEventListener('MSFullscreenChange', updateFsIcon);
 }
 
 // Keep mobile screen awake during active matches
