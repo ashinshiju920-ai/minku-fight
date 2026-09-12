@@ -7,6 +7,7 @@
 <title>MINKU-FIGHT — Wi-Fi & Local Stick Fighting Duel</title>
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥊</text></svg>">
+<link rel="preload" as="image" href="assets/victory.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -74,6 +75,16 @@
       <span class="tb-name">SUPER</span>
       <span class="tb-sub">MAX</span>
     </div>
+  </div>
+</div>
+
+<!-- In-Game Celebratory Round Victory Splash Overlay -->
+<div id="roundWinSplash" class="round-win-overlay" hidden>
+  <div class="round-win-card">
+    <div class="round-win-halo"></div>
+    <img id="roundWinImg" src="assets/victory.png" alt="VICTORY" class="round-win-img">
+    <div id="roundWinTitle" class="round-win-title">ROUND 1 WON!</div>
+    <div id="roundWinSub" class="round-win-sub">KAGE VICTORIOUS</div>
   </div>
 </div>
 
@@ -207,11 +218,17 @@
   <div class="pulse" id="selStatus" style="font-family:Bangers;font-size:20px;letter-spacing:.1em;color:var(--gold)"></div>
 </div>
 
-<!-- Screen 6: Match End -->
+<!-- Screen 6: Match End / Victory Screen -->
 <div class="scr" id="scrEnd" hidden>
-  <h2 class="sh" id="endTitle">KAGE WINS</h2>
-  <div id="endSub" class="small" style="font-size:18px"></div>
-  <div id="endBtns" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:10px">
+  <div class="win-banner-wrap" id="winBannerWrap">
+    <div class="win-aura-bg" id="winAuraBg"></div>
+    <div class="win-spark-ring"></div>
+    <img id="winHeroImg" src="assets/victory.png" alt="YOU WIN" class="win-hero-img">
+  </div>
+  <h2 class="sh win-title" id="endTitle">KAGE WINS THE MATCH</h2>
+  <div id="endSub" class="small" style="font-size:18px;letter-spacing:0.12em"></div>
+  <div id="endStats" class="end-stats-row"></div>
+  <div id="endBtns" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
     <button class="btn red" id="btnRematch">REMATCH</button>
     <button class="btn" id="btnToSelect">CHANGE FIGHTER</button>
     <button class="btn sm" id="btnToMenu">MAIN MENU</button>
@@ -223,10 +240,11 @@
   <h2 class="sh">PAUSED</h2>
   <div id="dojoControls" style="display:none;flex-direction:column;gap:10px;margin-bottom:12px">
     <div style="font-family:Bangers;color:var(--gold);font-size:22px">TRAINING SETTINGS</div>
-    <div style="display:flex;gap:8px;justify-content:center">
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
       <button class="btn sm" id="btnDummyMode">DUMMY: STAND</button>
       <button class="btn sm" id="btnInfMeter">INF METER: ON</button>
       <button class="btn sm" id="btnResetPos">RESET POS</button>
+      <button class="btn sm red" id="btnFinishDojo">CLAIM VICTORY</button>
     </div>
   </div>
   <div style="display:flex;gap:12px">
@@ -324,6 +342,21 @@
         game.projectiles = [];
         parts = [];
         toast('POSITIONS RESET');
+      }
+    };
+  }
+
+  const finishBtn = document.getElementById('btnFinishDojo');
+  if (finishBtn) {
+    finishBtn.onclick = function() {
+      sfx('ok');
+      if (game && game.mode === 'dojo') {
+        const p = document.getElementById('scrPause');
+        if (p) p.hidden = true;
+        game.paused = false;
+        game.wins[0] = 2;
+        game.phase = 'match';
+        if (typeof showEnd === 'function') showEnd(game, true);
       }
     };
   }

@@ -448,9 +448,9 @@ function gameStep(dt) {
       break;
     case 'end':
       if (g.phT > 1.9) {
-        if (g.wins[0] >= 2 || g.wins[1] >= 2) {
+        if (g.wins[0] >= 2 || g.wins[1] >= 2 || (g.training && g.wins[0] >= 1)) {
           g.phase = 'match';
-          showEnd(g);
+          showEnd(g, !!g.training);
         } else {
           resetRound(g);
         }
@@ -561,6 +561,7 @@ function endRound(g) {
 
   const perfect = w.hp >= 99.5;
   announce(perfect ? 'PERFECT' : (w.name + ' WINS'), 0, perfect ? (w.name + ' WINS') : '');
+  if (typeof showRoundWin === 'function') showRoundWin(w, g);
 }
 
 function timeUp(g) {
@@ -581,6 +582,7 @@ function timeUp(g) {
   w.vx = 0;
   fx('win', w.x, GY - 130, 1.4, w.slot);
   announce(w.name + ' WINS', 0);
+  if (typeof showRoundWin === 'function') showRoundWin(w, g);
 }
 
 /* ============ Combat & Collision Detection ============ */
@@ -730,6 +732,7 @@ function resolveHit(g, att, vic, w, hit, away) {
   const dmg = w.dmg * (att.ch ? att.ch.pow : 1) * scale * hit.mult;
   vic.hp = Math.max(0, vic.hp - dmg);
   att.comboN++;
+  att.comboMax = Math.max(att.comboMax || 0, att.comboN);
   att.comboT = 1.45;
   att.meter = clamp(att.meter + 6, 0, 100);
   vic.meter = clamp(vic.meter + 3.5, 0, 100);
@@ -1781,6 +1784,8 @@ function toast(msg) {
 
 function destroyGameUI() {
   showScreen('');
+  const rws = $('roundWinSplash');
+  if (rws) rws.hidden = true;
   const tui = $('touchUI');
   if (tui) tui.classList.toggle('on', isTouch);
 }
@@ -1811,11 +1816,93 @@ function onEsc() {
   }
 }
 
-function showEnd(g) {
-  const winner = (g.wins[0] >= 2) ? g.fighters[0] : g.fighters[1];
-  $('endTitle').textContent = winner.name + ' WINS THE MATCH';
-  $('endTitle').style.color = winner.ch.aura;
-  $('endSub').textContent = g.fighters[0].name + ' ' + g.wins[0] + ' — ' + g.wins[1] + ' ' + g.fighters[1].name;
+/* ============ Victory Presentation & Announcements ============ */
+const winImg = new Image();
+winImg.src = 'assets/victory.png';
+
+let roundWinTimer = null;
+function showRoundWin(w, g) {
+  const splash = $('roundWinSplash');
+  if (!splash || !w || !g) return;
+
+  const titleEl = $('roundWinTitle');
+  const subEl = $('roundWinSub');
+  const imgEl = $('roundWinImg');
+
+  if (titleEl) {
+    titleEl.textContent = `${w.name} WINS ROUND ${g.round}!`;
+    titleEl.style.color = w.ch.aura;
+  }
+  if (subEl) {
+    const perfect = w.hp >= 99.5;
+    subEl.textContent = perfect ? 'PERFECT VICTORY!' : `${w.ch.title} DOMINATES`;
+  }
+  if (imgEl) {
+    imgEl.style.animation = 'none';
+    void imgEl.offsetWidth;
+    imgEl.style.animation = '';
+  }
+
+  splash.hidden = false;
+  sfx('ok');
+  if (window.haptic) window.haptic([80, 40, 140]);
+
+  if (roundWinTimer) clearTimeout(roundWinTimer);
+  roundWinTimer = setTimeout(() => {
+    splash.hidden = true;
+  }, 1800);
+}
+window.showRoundWin = showRoundWin;
+
+function showEnd(g, isDojoFinish) {
+  const splash = $('roundWinSplash');
+  if (splash) splash.hidden = true;
+  if (roundWinTimer) { clearTimeout(roundWinTimer); roundWinTimer = null; }
+
+  const wSlot = (g.wins[0] >= g.wins[1]) ? 0 : 1;
+  const winner = g.fighters[wSlot];
+
+  const winHero = $('winHeroImg');
+  if (winHero) {
+    winHero.style.animation = 'none';
+    void winHero.offsetWidth; // trigger reflow
+    winHero.style.animation = '';
+  }
+
+  const auraBg = $('winAuraBg');
+  if (auraBg && winner.ch) {
+    auraBg.style.background = `radial-gradient(ellipse at center, ${winner.ch.aura}88 0%, rgba(255, 180, 46, 0.4) 42%, rgba(0, 0, 0, 0) 70%)`;
+  }
+
+  const endTitle = $('endTitle');
+  if (endTitle) {
+    if (isDojoFinish) {
+      endTitle.textContent = winner.name + ' MASTERED THE DOJO!';
+    } else {
+      endTitle.textContent = winner.name + ' VICTORIOUS!';
+    }
+    endTitle.style.color = winner.ch.aura;
+  }
+
+  const endSub = $('endSub');
+  if (endSub) {
+    if (isDojoFinish) {
+      endSub.textContent = 'TRAINING DOJO COMPLETED · TRUE MASTER';
+    } else {
+      endSub.textContent = g.fighters[0].name + ' ' + g.wins[0] + ' — ' + g.wins[1] + ' ' + g.fighters[1].name;
+    }
+  }
+
+  const statsRow = $('endStats');
+  if (statsRow) {
+    const maxCombo = Math.max(winner.comboMax || winner.comboN || 0, 3);
+    const roundStr = isDojoFinish ? 'DOJO SESSION' : `ROUNDS: ${g.wins[0] + g.wins[1]}`;
+    statsRow.innerHTML = `
+      <span class="stat-badge"><b>MODE:</b> ${g.mode.toUpperCase()}</span>
+      <span class="stat-badge"><b>${roundStr}</b></span>
+      <span class="stat-badge"><b>BEST COMBO:</b> ${maxCombo} HITS</span>
+    `;
+  }
 
   const old = $('guestWait');
   if (old && old.parentNode) old.parentNode.removeChild(old);
@@ -1829,16 +1916,20 @@ function showEnd(g) {
     const d = document.createElement('div');
     d.className = 'pulse';
     d.id = 'guestWait';
-    d.style.cssText = 'font-family:Bangers;font-size:22px;letter-spacing:.1em;color:var(--gold)';
-    d.textContent = 'WAITING FOR HOST…';
+    d.style.cssText = 'font-family:Bangers;font-size:22px;letter-spacing:.1em;color:var(--gold);margin-top:6px';
+    d.textContent = 'WAITING FOR HOST REMATCH…';
     $('endBtns').appendChild(d);
   }
 
   showScreen('scrEnd');
   const tui = $('touchUI');
   if (tui) tui.classList.remove('on');
-  say(winner.name + ' wins the match');
+
+  sfx('ok');
+  if (window.haptic) window.haptic([100, 50, 150, 50, 300]);
+  say(winner.name + ' wins the match! A true champion!');
 }
+window.showEnd = showEnd;
 
 /* ============ Character Select Screen ============ */
 let sel = { mode: 'cpu', my: 0, ready: false, rem: -1, remReady: false, diff: 1, name: '', remName: '' };

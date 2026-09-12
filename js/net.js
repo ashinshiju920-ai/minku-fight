@@ -673,10 +673,22 @@ function guestInterp() {
   }
 
   const k = (a === b) ? 0 : clamp((rt - a.rt) / Math.max(1, b.rt - a.rt), 0, 1);
+  const prevPh = g.phase;
   g.phase = b.d.ph;
   g.timer = b.d.timer;
   g.wins = b.d.wins;
   g.round = b.d.rd;
+
+  // Guest trigger for Match End victory screen
+  if (b.d.ph === 'match' && typeof showEnd === 'function') {
+    const endScr = document.getElementById('scrEnd');
+    if (endScr && endScr.hidden) {
+      showEnd(g);
+    }
+  } else if (b.d.ph === 'end' && prevPh !== 'end' && typeof showRoundWin === 'function') {
+    const wSlot = (g.wins[0] > (a.d && a.d.wins ? a.d.wins[0] : 0)) ? 0 : 1;
+    showRoundWin(g.fighters[wSlot], g);
+  }
 
   for (let i = 0; i < 2; i++) {
     const fa = a.d.f[i], fb = b.d.f[i], f = g.fighters[i];

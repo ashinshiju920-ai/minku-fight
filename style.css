@@ -751,3 +751,231 @@ h2.sh {
 @media (orientation: portrait) and (pointer: coarse) {
   #rotate { display: flex; }
 }
+
+/* ==========================================================================
+   Victory Winning Screen & Celebratory Splash Overlay
+   ========================================================================== */
+.win-banner-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+  perspective: 900px;
+}
+
+.win-hero-img {
+  max-height: min(38vh, 260px);
+  max-width: min(88vw, 450px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 26px rgba(255, 180, 46, 0.85)) drop-shadow(0 10px 22px rgba(0, 0, 0, 0.9));
+  animation: winPopIn 0.75s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, winFloat 3s ease-in-out 0.75s infinite alternate;
+  will-change: transform, filter;
+  border-radius: 8px;
+}
+
+.win-aura-bg {
+  position: absolute;
+  inset: -28px -36px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(255, 180, 46, 0.45) 0%, rgba(224, 58, 36, 0.28) 42%, rgba(0, 0, 0, 0) 72%);
+  z-index: -1;
+  animation: winAuraPulse 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.win-spark-ring {
+  position: absolute;
+  width: 110%;
+  height: 110%;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 180, 46, 0.35);
+  animation: rotateSpin 18s linear infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.win-title {
+  font-family: 'Bangers', cursive;
+  font-size: clamp(30px, 6.5vw, 52px);
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 20px rgba(255, 180, 46, 0.75), 4px 4px 0 #000;
+  line-height: 1.05;
+  margin: 2px 0;
+}
+
+.end-stats-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  margin: 4px 0;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+}
+
+.stat-badge {
+  background: rgba(22, 18, 15, 0.9);
+  border: 1.5px solid rgba(255, 180, 46, 0.7);
+  color: var(--paper);
+  padding: 4px 12px;
+  border-radius: 4px;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.6);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-badge b {
+  color: var(--gold);
+}
+
+/* In-Game Celebratory Round Victory Splash Overlay */
+.round-win-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 25;
+  background: radial-gradient(circle at center, rgba(12, 10, 8, 0.45) 0%, rgba(10, 8, 7, 0.8) 100%);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.16s ease-out;
+}
+
+.round-win-overlay[hidden] {
+  display: none !important;
+}
+
+.round-win-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  animation: winPopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.round-win-halo {
+  position: absolute;
+  inset: -30px -40px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(255, 180, 46, 0.55) 0%, rgba(224, 58, 36, 0.35) 45%, rgba(0, 0, 0, 0) 70%);
+  animation: winAuraPulse 1.8s ease-in-out infinite;
+  z-index: -1;
+}
+
+.round-win-img {
+  max-height: min(34vh, 220px);
+  max-width: min(85vw, 380px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 24px rgba(255, 180, 46, 0.95)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.9));
+}
+
+.round-win-title {
+  font-family: 'Bangers', cursive;
+  font-size: clamp(26px, 5.5vw, 44px);
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 16px rgba(255, 180, 46, 0.8), 3px 3px 0 #000;
+  margin-top: 6px;
+  line-height: 1.1;
+}
+
+.round-win-sub {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--paper);
+  opacity: 0.9;
+  text-shadow: 2px 2px 0 #000;
+}
+
+/* Animations */
+@keyframes winPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.35) translateY(45px) rotate(-4deg);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.08) translateY(-6px) rotate(1deg);
+  }
+  85% {
+    transform: scale(0.97) translateY(2px) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+}
+
+@keyframes winFloat {
+  0% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 0 24px rgba(255, 180, 46, 0.8)) drop-shadow(0 10px 18px rgba(0, 0, 0, 0.85));
+  }
+  100% {
+    transform: translateY(-9px) scale(1.025);
+    filter: drop-shadow(0 0 36px rgba(255, 180, 46, 1)) drop-shadow(0 16px 26px rgba(0, 0, 0, 0.95));
+  }
+}
+
+@keyframes winAuraPulse {
+  0%, 100% {
+    transform: scale(0.92);
+    opacity: 0.65;
+  }
+  50% {
+    transform: scale(1.22);
+    opacity: 1;
+  }
+}
+
+/* Mobile Landscape Constraints for Victory Screen */
+@media (max-height: 500px) {
+  #scrEnd {
+    padding: 6px 12px;
+    gap: 4px;
+    overflow-y: auto;
+    justify-content: flex-start;
+  }
+  .win-hero-img {
+    max-height: min(34vh, 140px);
+  }
+  .win-title {
+    font-size: clamp(20px, 4.8vw, 30px);
+    margin: 0;
+  }
+  .end-stats-row {
+    margin: 2px 0;
+    gap: 6px;
+  }
+  .stat-badge {
+    padding: 2px 8px;
+    font-size: 13px;
+  }
+  #endBtns {
+    margin-top: 2px;
+    gap: 8px;
+  }
+  #endBtns .btn {
+    padding: 5px 16px;
+    font-size: 15px;
+  }
+  .round-win-img {
+    max-height: min(32vh, 130px);
+  }
+}
+
