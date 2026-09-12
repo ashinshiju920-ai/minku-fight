@@ -88,8 +88,15 @@ function startMove(f, key) {
 
   if (key === 'super') {
     f.pose = clonePose(FLARE);
-    if (window.game) window.game.hitstop = Math.max(window.game.hitstop, 0.45);
-    fx('su', f.x, GY - 110, 1.5, f.ci);
+    if (window.game) {
+      window.game.hitstop = Math.max(window.game.hitstop, 0.45);
+      window.game.flash = 0.85;
+      window.game.superFreeze = { f: f, t: 0.45 };
+      if (window.game.cam) camShake(window.game.cam, 16, 0.35);
+    }
+    fx('su', f.x, GY - 110, 2.0, f.ci);
+    sfx('riser');
+    sfx('hitH');
   }
 
   const KICKMV = (key === 'lowk' || key === 'highk' || key === 'sweep' || key === 'airk');

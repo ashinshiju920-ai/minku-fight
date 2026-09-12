@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="description" content="MINKU-FIGHT — Fast-paced martial arts stick fighting duel game with 4 unique fighters, fluid skeletal combat, local 2-player, training dojo, and Wi-Fi WebRTC P2P duels.">
 <title>MINKU-FIGHT — Wi-Fi & Local Stick Fighting Duel</title>
 <link rel="icon" href="favicon.ico" sizes="any">
@@ -17,24 +17,65 @@
 
 <div id="errBox"></div>
 
-<!-- Touch Controls for Mobile / Tablets -->
-<div id="touchUI">
-  <div id="joy"><div id="joyKnob"></div></div>
-  <div class="tbtn" data-k="p"  style="right:108px;bottom:28px;width:84px;height:84px;font-size:25px">PUNCH</div>
-  <div class="tbtn" data-k="k"  style="right:22px;bottom:94px;width:84px;height:84px;font-size:25px">KICK</div>
-  <div class="tbtn" data-k="bl" style="right:118px;bottom:148px;width:70px;height:70px;font-size:19px">BLOCK</div>
-  <div class="tbtn" data-k="gr" style="right:26px;bottom:194px;width:58px;height:58px;font-size:16px">GRAB</div>
-  <div class="tbtn" data-k="s1" style="right:116px;bottom:234px;width:58px;height:58px;font-size:14px">SHOT</div>
-  <div class="tbtn" data-k="s2" style="right:192px;bottom:118px;width:58px;height:58px;font-size:14px">RUSH</div>
-  <div class="tbtn" data-k="su" style="right:192px;bottom:190px;width:58px;height:58px;font-size:14px">SUPER</div>
+<!-- Top Utility Controls (Fullscreen & Audio) -->
+<div id="topBar">
+  <button id="fsBtn" title="Toggle Fullscreen (F)" aria-label="Fullscreen">
+    <svg viewBox="0 0 24 24">
+      <path id="fsIco" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+    </svg>
+  </button>
+  <button id="sndBtn" title="Toggle Sound (M)" aria-label="Toggle Sound">
+    <svg viewBox="0 0 24 24">
+      <path id="sndIco" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/>
+    </svg>
+  </button>
 </div>
 
-<!-- Audio Toggle -->
-<button id="sndBtn" title="Toggle Sound (M)">
-  <svg viewBox="0 0 24 24">
-    <path id="sndIco" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/>
-  </svg>
-</button>
+<!-- Ergonomic Touch Controls for Mobile & Tablets -->
+<div id="touchUI">
+  <!-- Left Side: Analog Joystick -->
+  <div id="joyZone">
+    <div id="joy">
+      <span class="jdir jdir-u">▲</span>
+      <span class="jdir jdir-d">▼</span>
+      <span class="jdir jdir-l">◀</span>
+      <span class="jdir jdir-r">▶</span>
+      <div id="joyKnob"></div>
+    </div>
+  </div>
+
+  <!-- Right Side: Radial Arcade Button Cluster -->
+  <div id="btnCluster">
+    <div class="tbtn tbtn-p" data-k="p" aria-label="Punch">
+      <span class="tb-name">PUNCH</span>
+      <span class="tb-sub">TAP x2</span>
+    </div>
+    <div class="tbtn tbtn-k" data-k="k" aria-label="Kick">
+      <span class="tb-name">KICK</span>
+      <span class="tb-sub">COMBO</span>
+    </div>
+    <div class="tbtn tbtn-bl" data-k="bl" aria-label="Block">
+      <span class="tb-name">BLOCK</span>
+      <span class="tb-sub">HOLD</span>
+    </div>
+    <div class="tbtn tbtn-gr" data-k="gr" aria-label="Grab">
+      <span class="tb-name">GRAB</span>
+      <span class="tb-sub">THROW</span>
+    </div>
+    <div class="tbtn tbtn-s1" data-k="s1" aria-label="Shot">
+      <span class="tb-name">SHOT</span>
+      <span class="tb-sub">30%</span>
+    </div>
+    <div class="tbtn tbtn-s2" data-k="s2" aria-label="Rush">
+      <span class="tb-name">RUSH</span>
+      <span class="tb-sub">30%</span>
+    </div>
+    <div class="tbtn tbtn-su" data-k="su" aria-label="Super">
+      <span class="tb-name">SUPER</span>
+      <span class="tb-sub">MAX</span>
+    </div>
+  </div>
+</div>
 
 <!-- Screen 1: Title & Main Menu -->
 <div class="scr" id="scrTitle">
@@ -212,7 +253,14 @@
 </div>
 
 <div id="toasts"></div>
-<div id="rotate">ROTATE YOUR DEVICE<br><span style="font-size:17px;color:var(--paper)">MINKU-FIGHT plays best in landscape</span></div>
+<div id="rotate">
+  <div class="rotate-box">
+    <div class="rotate-ico">🥋 ↷ 📱</div>
+    <div class="rotate-title">ROTATE DEVICE TO LANDSCAPE</div>
+    <div class="rotate-sub">MINKU-FIGHT is optimized for horizontal widescreen combat.</div>
+    <button class="btn gold sm" id="btnRotateFs" style="margin-top:16px;box-shadow:0 0 16px rgba(255,180,46,0.6)">ENTER FULLSCREEN</button>
+  </div>
+</div>
 
 <!-- Load Scripts in Correct Dependency Order -->
 <script src="js/peerjs.min.js"></script>

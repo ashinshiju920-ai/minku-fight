@@ -101,46 +101,59 @@ const isTouch = ('ontouchstart' in window) || matchMedia('(pointer:coarse)').mat
 
 (function() {
   const joy = document.getElementById('joy'), knob = document.getElementById('joyKnob');
+  const joyZone = document.getElementById('joyZone');
   if (!joy || !knob) return;
   let jid = null;
 
   function mv(e) {
     const r = joy.getBoundingClientRect();
-    let dx = (e.clientX - r.left - 74) / 58, dy = (e.clientY - r.top - 74) / 58;
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const maxR = r.width * 0.38;
+
+    let dx = (e.clientX - cx) / maxR;
+    let dy = (e.clientY - cy) / maxR;
     const m = Math.hypot(dx, dy);
     if (m > 1) { dx /= m; dy /= m; }
-    knob.style.left = (74 + dx * 46 - 32) + 'px';
-    knob.style.top = (74 + dy * 46 - 32) + 'px';
-    touch.le = dx < -0.4 ? 1 : 0;
-    touch.ri = dx >  0.4 ? 1 : 0;
-    touch.dn = dy >  0.5 ? 1 : 0;
+
+    knob.style.transform = `translate(${dx * maxR}px, ${dy * maxR}px)`;
+
+    touch.le = dx < -0.35 ? 1 : 0;
+    touch.ri = dx >  0.35 ? 1 : 0;
+    touch.dn = dy >  0.45 ? 1 : 0;
     const was = touch.up;
-    touch.up = dy < -0.62 ? 1 : 0;
-    if (touch.up && !was) touch._jmp = 1;
+    touch.up = dy < -0.55 ? 1 : 0;
+    if (touch.up && !was) {
+      touch._jmp = 1;
+      if (window.haptic) window.haptic('light');
+    }
   }
 
-  joy.addEventListener('pointerdown', e => {
+  function startJoy(e) {
     jid = e.pointerId;
-    joy.setPointerCapture(jid);
+    try { (joyZone || joy).setPointerCapture(jid); } catch (err) {}
     mv(e);
-  });
+  }
 
-  joy.addEventListener('pointermove', e => {
+  const targetEl = joyZone || joy;
+  targetEl.addEventListener('pointerdown', startJoy);
+
+  targetEl.addEventListener('pointermove', e => {
     if (e.pointerId === jid) mv(e);
   });
 
   function end(e) {
     if (e.pointerId === jid) {
       jid = null;
-      knob.style.left = '42px';
-      knob.style.top = '42px';
+      knob.style.transform = 'translate(0px, 0px)';
       touch.le = touch.ri = touch.up = touch.dn = 0;
     }
   }
 
-  joy.addEventListener('pointerup', end);
-  joy.addEventListener('pointercancel', end);
+  targetEl.addEventListener('pointerup', end);
+  targetEl.addEventListener('pointercancel', end);
 
+  // Multi-touch arcade buttons with haptics
   const btns = document.querySelectorAll('.tbtn');
   for (let i = 0; i < btns.length; i++) {
     const b = btns[i], k = b.getAttribute('data-k');
@@ -149,15 +162,21 @@ const isTouch = ('ontouchstart' in window) || matchMedia('(pointer:coarse)').mat
       try { b.setPointerCapture(e.pointerId); } catch (err) {}
       touch[k] = 1;
       b.classList.add('dn');
+      if (window.haptic) {
+        window.haptic(k === 'su' ? 'heavy' : 'light');
+      }
       if (k !== 'bl') {
         touch._edg = touch._edg || {};
         touch._edg[k] = 1;
       }
     });
-    function up() {
+
+    function up(e) {
+      e.preventDefault();
       touch[k] = 0;
       b.classList.remove('dn');
     }
+
     b.addEventListener('pointerup', up);
     b.addEventListener('pointercancel', up);
   }
@@ -1180,44 +1199,237 @@ function drawAnns(c, rdt) {
   for (let i = 0; i < anns.length; i++) {
     const a = anns[i];
     a.t += rdt;
-    if (a.t < 1.05) keep.push(a);
+    if (a.t < 1.15) keep.push(a);
   }
   anns = keep;
 
   for (let i = 0; i < anns.length; i++) {
     const a = anns[i];
     const inK = clamp(a.t / 0.14, 0, 1), sc = EASE.snap(inK) * (1 + Math.max(0, 0.25 - a.t) * 0.6);
-    const out = clamp((a.t - 0.85) / 0.2, 0, 1);
+    const out = clamp((a.t - 0.90) / 0.24, 0, 1);
+
     c.save();
     c.translate(W / 2, H * 0.40);
     c.rotate(-0.03);
     c.scale(sc, sc);
     c.globalAlpha = 1 - out;
 
-    c.font = '110px Bangers, cursive';
+    // Comic action speedlines on FIGHT / KO
+    if (a.style > 0 && a.t < 0.7) {
+      c.save();
+      c.strokeStyle = a.style === 1 ? 'rgba(224, 58, 36, 0.4)' : 'rgba(255, 180, 46, 0.4)';
+      c.lineWidth = 3;
+      for (let s = 0; s < 16; s++) {
+        const ang = (s / 16) * TAU;
+        c.beginPath();
+        c.moveTo(Math.cos(ang) * 90, Math.sin(ang) * 90);
+        c.lineTo(Math.cos(ang) * 380, Math.sin(ang) * 380);
+        c.stroke();
+      }
+      c.restore();
+    }
+
+    c.font = '112px Bangers, cursive';
     c.textAlign = 'center';
-    c.lineWidth = 12;
+    c.lineWidth = 14;
     c.strokeStyle = INKC;
     c.strokeText(a.text, 0, 0);
-    c.fillStyle = a.style === 1 ? '#e03a24' : (a.style === 2 ? '#ffb42e' : PAPER);
+
+    c.lineWidth = 6;
+    c.strokeStyle = a.style === 1 ? '#e03a24' : (a.style === 2 ? '#ffb42e' : 'rgba(242, 234, 216, 0.6)');
+    c.strokeText(a.text, 0, 0);
+
+    c.fillStyle = a.style === 1 ? '#ff6045' : (a.style === 2 ? '#ffcf4d' : PAPER);
     c.fillText(a.text, 0, 0);
 
     if (a.sub) {
-      c.font = '32px Bangers, cursive';
+      c.font = '34px Bangers, cursive';
+      c.lineWidth = 8;
+      c.strokeStyle = INKC;
+      c.strokeText(a.sub, 0, 44);
       c.fillStyle = PAPER;
-      c.lineWidth = 7;
-      c.strokeText(a.sub, 0, 42);
-      c.fillText(a.sub, 0, 42);
+      c.fillText(a.sub, 0, 44);
     }
 
-    c.fillStyle = '#e03a24';
+    c.fillStyle = a.style === 1 ? '#e03a24' : '#ffb42e';
     c.save();
     c.rotate(-0.05);
-    c.fillRect(-Math.min(280, 54 * a.text.length), 14, Math.min(280, 54 * a.text.length), 7);
+    const lineW = Math.min(320, 50 * a.text.length);
+    c.fillRect(-lineW / 2, 16, lineW, 8);
     c.restore();
+
     c.restore();
   }
   c.globalAlpha = 1;
+}
+
+function drawMatchIntro(c, g, t) {
+  if (t < 0 || t > 2.2) return;
+  const f0 = g.fighters[0], f1 = g.fighters[1];
+  if (!f0 || !f1) return;
+
+  c.save();
+
+  let slideIn = clamp(t / 0.35, 0, 1);
+  slideIn = EASE.outBack(slideIn);
+
+  let exit = 0;
+  if (t > 1.8) {
+    exit = clamp((t - 1.8) / 0.35, 0, 1);
+    exit = exit * exit;
+  }
+
+  const p1Offset = -W * (1 - slideIn) - W * exit;
+  const p2Offset = W * (1 - slideIn) + W * exit;
+
+  c.fillStyle = 'rgba(11, 9, 8, ' + (0.75 * (1 - exit)).toFixed(3) + ')';
+  c.fillRect(0, 0, W, H);
+
+  // Player 1 Banner
+  c.save();
+  c.translate(p1Offset, 0);
+  c.beginPath();
+  c.moveTo(-50, 0);
+  c.lineTo(W * 0.58, 0);
+  c.lineTo(W * 0.42, H);
+  c.lineTo(-50, H);
+  c.closePath();
+  c.fillStyle = 'rgba(20, 16, 14, 0.94)';
+  c.fill();
+  c.strokeStyle = f0.ch.aura;
+  c.lineWidth = 5;
+  c.stroke();
+
+  c.beginPath();
+  c.moveTo(W * 0.58 - 14, 0);
+  c.lineTo(W * 0.42 - 14, H);
+  c.strokeStyle = f0.ch.aura;
+  c.lineWidth = 8;
+  c.stroke();
+
+  c.textAlign = 'left';
+  c.font = '22px Bangers, cursive';
+  c.fillStyle = 'var(--gold)';
+  c.fillText('PLAYER 1 · ' + f0.ch.title, 60, H * 0.36);
+
+  c.font = '96px Bangers, cursive';
+  c.lineWidth = 14;
+  c.strokeStyle = INKC;
+  c.strokeText(f0.name, 60, H * 0.49);
+  c.fillStyle = f0.ch.aura;
+  c.fillText(f0.name, 60, H * 0.49);
+
+  c.font = '700 17px Rajdhani, sans-serif';
+  c.fillStyle = PAPER;
+  c.fillText(f0.ch.desc, 60, H * 0.54);
+  c.restore();
+
+  // Player 2 Banner
+  c.save();
+  c.translate(p2Offset, 0);
+  c.beginPath();
+  c.moveTo(W * 0.58, 0);
+  c.lineTo(W + 50, 0);
+  c.lineTo(W + 50, H);
+  c.lineTo(W * 0.42, H);
+  c.closePath();
+  c.fillStyle = 'rgba(16, 18, 22, 0.94)';
+  c.fill();
+  c.strokeStyle = f1.ch.aura;
+  c.lineWidth = 5;
+  c.stroke();
+
+  c.textAlign = 'right';
+  c.font = '22px Bangers, cursive';
+  c.fillStyle = 'var(--gold)';
+  const p2Tag = (g.mode === 'local2p') ? 'PLAYER 2 · ' : 'CHALLENGER · ';
+  c.fillText(p2Tag + f1.ch.title, W - 60, H * 0.56);
+
+  c.font = '96px Bangers, cursive';
+  c.lineWidth = 14;
+  c.strokeStyle = INKC;
+  c.strokeText(f1.name, W - 60, H * 0.69);
+  c.fillStyle = f1.ch.aura;
+  c.fillText(f1.name, W - 60, H * 0.69);
+
+  c.font = '700 17px Rajdhani, sans-serif';
+  c.fillStyle = PAPER;
+  c.fillText(f1.ch.desc, W - 60, H * 0.74);
+  c.restore();
+
+  // Center "VS" Emblem
+  if (slideIn > 0.4 && exit < 0.9) {
+    const vsT = clamp((t - 0.25) / 0.25, 0, 1);
+    const vsScale = EASE.outBack(vsT) * (1 + 0.04 * Math.sin(t * 12));
+    const vsAlpha = clamp(1 - exit * 1.5, 0, 1);
+
+    c.save();
+    c.translate(W / 2, H / 2);
+    c.scale(vsScale, vsScale);
+    c.globalAlpha = vsAlpha;
+
+    c.beginPath();
+    c.arc(0, 0, 68, 0, TAU);
+    c.fillStyle = 'rgba(224, 58, 36, 0.92)';
+    c.fill();
+    c.strokeStyle = PAPER;
+    c.lineWidth = 5;
+    c.stroke();
+
+    c.beginPath();
+    c.arc(0, 0, 78, 0, TAU);
+    c.strokeStyle = 'rgba(20, 17, 16, 0.6)';
+    c.lineWidth = 4;
+    c.stroke();
+
+    c.font = '76px Bangers, cursive';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.lineWidth = 10;
+    c.strokeStyle = INKC;
+    c.strokeText('VS', 0, 4);
+    c.fillStyle = PAPER;
+    c.fillText('VS', 0, 4);
+    c.restore();
+  }
+
+  c.restore();
+}
+
+function drawSuperFreeze(c, g) {
+  if (!g.superFreeze || g.superFreeze.t <= 0) return;
+  const f = g.superFreeze.f;
+  if (!f) return;
+  const alpha = clamp(g.superFreeze.t / 0.45, 0, 1);
+
+  c.save();
+  const grad = c.createRadialGradient(W / 2, H / 2, 80, W / 2, H / 2, W * 0.7);
+  grad.addColorStop(0, 'rgba(0, 0, 0, 0.15)');
+  grad.addColorStop(1, 'rgba(10, 8, 7, ' + (0.85 * alpha).toFixed(3) + ')');
+  c.fillStyle = grad;
+  c.fillRect(0, 0, W, H);
+
+  c.strokeStyle = f.ch.aura;
+  c.lineWidth = 2;
+  c.globalAlpha = 0.35 * alpha;
+  for (let i = 0; i < 16; i++) {
+    const ang = (i / 16) * TAU + (performance.now() / 300);
+    c.beginPath();
+    c.moveTo(W / 2 + Math.cos(ang) * (W * 0.25), H / 2 + Math.sin(ang) * (H * 0.25));
+    c.lineTo(W / 2 + Math.cos(ang) * W, H / 2 + Math.sin(ang) * H);
+    c.stroke();
+  }
+
+  c.globalAlpha = alpha;
+  c.font = '64px Bangers, cursive';
+  c.textAlign = 'center';
+  c.lineWidth = 9;
+  c.strokeStyle = INKC;
+  const superName = f.ch.sp ? f.ch.sp[2] : 'SUPER ART';
+  c.strokeText(f.name + ' · ' + superName, W / 2, 110);
+  c.fillStyle = f.ch.aura;
+  c.fillText(f.name + ' · ' + superName, W / 2, 110);
+  c.restore();
 }
 
 function drawHUD(c, g) {
@@ -1362,11 +1574,14 @@ cv.height = H * RS;
 const ctx = cv.getContext('2d');
 
 function fit() {
-  const s = Math.min(window.innerWidth / W, window.innerHeight / H);
-  cv.style.width = (W * s) + 'px';
-  cv.style.height = (H * s) + 'px';
+  const ww = window.innerWidth;
+  const wh = window.innerHeight;
+  const s = Math.min(ww / W, wh / H);
+  cv.style.width = Math.floor(W * s) + 'px';
+  cv.style.height = Math.floor(H * s) + 'px';
 }
 addEventListener('resize', fit);
+addEventListener('orientationchange', () => { setTimeout(fit, 100); });
 fit();
 
 if (document.fonts && document.fonts.load) document.fonts.load('80px Bangers');
@@ -1439,9 +1654,19 @@ function render(rdt) {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
     ctx.fillRect(0, 0, W, 26);
     ctx.fillRect(0, H - 26, W, 26);
+
+    // Cinematic Match Intro
+    if (g.phase === 'intro') {
+      drawMatchIntro(ctx, g, g.phT);
+    }
   } else {
     ctx.fillStyle = 'rgba(12, 10, 8, 0.35)';
     ctx.fillRect(0, 0, W, H);
+  }
+
+  // Super move freeze overlay
+  if (g.superFreeze && g.superFreeze.t > 0) {
+    drawSuperFreeze(ctx, g);
   }
 
   if (g.flash > 0) {
@@ -1462,6 +1687,9 @@ function frame(now) {
   try {
     const g = game;
     if (g) {
+      if (g.superFreeze && g.superFreeze.t > 0) {
+        g.superFreeze.t -= rdt;
+      }
       if (g.authority) {
         let eff = rdt;
         if (g.slowT > 0) {
@@ -2046,6 +2274,43 @@ try {
 } catch (e) {
   console.error('Stage build error:', e);
 }
+
+/* ============ Fullscreen & Mobile Viewport Setup ============ */
+function setupFullscreen() {
+  const fsBtn = $('fsBtn');
+  const rotateFs = $('btnRotateFs');
+
+  function toggleFs() {
+    sfx('ui');
+    if (window.haptic) window.haptic('light');
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      const docEl = document.documentElement;
+      if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
+      else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen().catch(() => {});
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(() => {});
+    }
+  }
+
+  if (fsBtn) fsBtn.onclick = toggleFs;
+  if (rotateFs) rotateFs.onclick = toggleFs;
+
+  function updateFsIcon() {
+    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    const ico = $('fsIco');
+    if (ico) {
+      ico.setAttribute('d', isFs
+        ? 'M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z'
+        : 'M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z');
+    }
+  }
+
+  document.addEventListener('fullscreenchange', updateFsIcon);
+  document.addEventListener('webkitfullscreenchange', updateFsIcon);
+}
+
+setupFullscreen();
 
 showScreen('scrTitle');
 
