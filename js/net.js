@@ -229,6 +229,7 @@ function hostRoom(onReady, onFail, customCode) {
     ctrl: { le: 0, ri: 0, up: 0, dn: 0, p: 0, k: 0, bl: 0, s1: 0, s2: 0, su: 0, gr: 0 },
     lastMsg: performance.now(),
     gotGame: false,
+    gotStart: false,
     inSeq: 0,
     lastSeq: -1,
     selTimer: null
@@ -294,6 +295,7 @@ function joinRoom(code, onFail, isQuick) {
     ctrl: null,
     lastMsg: performance.now(),
     gotGame: false,
+    gotStart: false,
     inSeq: 0,
     lastSeq: -1,
     selTimer: null,
@@ -430,6 +432,7 @@ function onLinkMessage(str) {
 function onLinkUp() {
   sfx('ok');
   stopNetTimers();
+  if (net) net.gotStart = false;
 
   if (net.role === 'host') {
     toast('CHALLENGER CONNECTED!');
@@ -514,41 +517,55 @@ function onNetData(d) {
       toast(d.v ? 'OPPONENT TABBED OUT' : 'OPPONENT IS BACK');
       break;
     case 'togsel':
-      showScreen('scrSelect');
-      selSetup('guest');
       netSend({ t: 'togsel_ack' });
+      const selScr = document.getElementById('scrSelect');
+      const alreadyInSel = selScr && !selScr.hidden && (typeof sel !== 'undefined') && sel && sel.mode === 'guest';
+      if (!alreadyInSel) {
+        showScreen('scrSelect');
+        selSetup('guest');
+      }
       break;
     case 'togsel_ack':
       if (net) net.guestInSel = true;
       break;
     case 'start':
       netSend({ t: 'start_ack' });
-      if (net.gotStart) break;
+      if (net.gotStart && window.game && window.game.phase === 'fight') break;
       net.gotStart = true;
+      if (net.selTimer) {
+        clearInterval(net.selTimer);
+        net.selTimer = null;
+      }
       destroyGameUI();
       createGame({ mode: net.role, chars: d.chars, names: d.names });
       break;
     case 'start_ack':
       // Host received guest start confirmation
       break;
-    case 'sel':
-      selRemote(d.i, d.r, d.name);
-      // Immediately reply with own selection so rival never sees "VS -"
-      if (typeof sel !== 'undefined' && sel.mode !== 'cpu') {
-        netSend({ t: 'sel_reply', i: sel.my, r: sel.ready, name: myName() });
+    case 'req_start':
+      // Guest is ready and requested start sync
+      if (net && net.role === 'host') {
+        const p1Char = (window.game && window.game.chars) ? window.game.chars[0] : Math.max(0, Math.min(CHARS.length - 1, (typeof sel !== 'undefined' ? sel.my : 0) || 0));
+        const p2Char = (window.game && window.game.chars) ? window.game.chars[1] : Math.max(0, Math.min(CHARS.length - 1, (typeof sel !== 'undefined' && sel.rem >= 0) ? sel.rem : 0));
+        const chars = [p1Char, p2Char];
+        const names = (window.game && window.game.names) ? window.game.names : [myName(), (typeof sel !== 'undefined' && saneName(sel.remName)) || CHARS[chars[1]].name];
+        netSend({ t: 'start', chars: chars, names: names });
       }
       break;
-    case 'sel_reply':
-      selRemote(d.i, d.r, d.name);
+    case 'sel': {
+      const isReady = (d.ready !== undefined) ? d.ready : (d.r !== undefined ? d.r : false);
+      selRemote(d.i, isReady, d.name);
+      // Immediately reply with own selection so rival never sees "VS -"
+      if (typeof sel !== 'undefined' && sel.mode !== 'cpu') {
+        netSend({ t: 'sel_reply', i: sel.my, r: sel.ready, ready: sel.ready, name: myName() });
+      }
       break;
-    case 'start':
-      netSend({ t: 'start_ack' });
-      destroyGameUI();
-      createGame({ mode: net.role, chars: d.chars, names: d.names });
+    }
+    case 'sel_reply': {
+      const isReady = (d.ready !== undefined) ? d.ready : (d.r !== undefined ? d.r : false);
+      selRemote(d.i, isReady, d.name);
       break;
-    case 'start_ack':
-      // Host received guest start confirmation
-      break;
+    }
     case 'i':
       if (d.seq !== undefined && net.lastSeq !== undefined && d.seq < net.lastSeq) {
         return; // Discard out-of-order input packet

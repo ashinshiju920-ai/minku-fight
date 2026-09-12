@@ -2008,6 +2008,8 @@ function showEnd(g, isDojoFinish) {
     $('endBtns').appendChild(d);
   }
 
+  if (net) net.gotStart = false;
+
   showScreen('scrEnd');
   const tui = $('touchUI');
   if (tui) tui.classList.remove('on');
@@ -2026,6 +2028,7 @@ function myName() {
 }
 
 function selSetup(mode) {
+  if (net) net.gotStart = false;
   sel = {
     mode: mode,
     my: sel.my || 0,
@@ -2057,11 +2060,15 @@ function selSetup(mode) {
     if (net.selTimer) clearInterval(net.selTimer);
     const broadcastSel = () => {
       if (net && net.up && (!game || game.phase !== 'fight')) {
-        netSend({ t: 'sel', i: sel.my, r: sel.ready, name: myName() });
+        netSend({ t: 'sel', i: sel.my, r: sel.ready, ready: sel.ready, name: myName() });
+        // Guest failsafe: if both players are confirmed ready but game has not launched yet, prompt host
+        if (net.role === 'guest' && sel.ready && sel.remReady && (!game || !game.online)) {
+          netSend({ t: 'req_start' });
+        }
       }
     };
     broadcastSel();
-    net.selTimer = setInterval(broadcastSel, 350);
+    net.selTimer = setInterval(broadcastSel, 300);
   }
 }
 
@@ -2104,7 +2111,7 @@ function buildSelGrid() {
         sel.my = i;
         if (sel.mode !== 'cpu' && sel.mode !== 'dojo') {
           sel.ready = false;
-          netSend({ t: 'sel', i: i, ready: false, name: myName(), tok: net ? net.tok : null });
+          netSend({ t: 'sel', i: i, r: false, ready: false, name: myName(), tok: net ? net.tok : null });
         }
       }
       updateSelUI();
@@ -2193,13 +2200,17 @@ function updateSelUI() {
   if (sel.mode !== 'cpu' && sel.mode !== 'local2p' && sel.mode !== 'dojo') {
     $('btnReady').style.background = sel.ready ? 'var(--paper)' : '';
     $('btnReady').style.color = sel.ready ? 'var(--ink)' : '';
-    $('selStatus').textContent = (sel.ready && sel.remReady) ? 'STARTING…' : (sel.remReady ? 'RIVAL IS READY' : (net && net.up ? 'CONNECTED' : ''));
+    if (hostLaunchT) {
+      $('selStatus').textContent = 'STARTING MATCH…';
+    } else {
+      $('selStatus').textContent = (sel.ready && sel.remReady) ? 'STARTING…' : (sel.remReady ? 'RIVAL IS READY' : (net && net.up ? 'CONNECTED' : ''));
+    }
   }
 }
 
 function selRemote(i, ready, name) {
-  sel.rem = i;
-  sel.remReady = !!ready;
+  if (i !== undefined && i !== null) sel.rem = i;
+  if (ready !== undefined && ready !== null) sel.remReady = !!ready;
   if (name !== undefined && name !== '') sel.remName = saneName(name);
   updateSelUI();
   if (net && net.role === 'host' && sel.ready && sel.remReady) hostLaunch();
@@ -2215,16 +2226,19 @@ function hostLaunch() {
   $('selStatus').textContent = 'STARTING MATCH…';
   hostLaunchT = setTimeout(() => {
     hostLaunchT = null;
-    const chars = [sel.my, (sel.rem >= 0) ? sel.rem : 0];
+    const p1 = Math.max(0, Math.min(CHARS.length - 1, sel.my || 0));
+    const p2 = Math.max(0, Math.min(CHARS.length - 1, (sel.rem >= 0) ? sel.rem : 0));
+    const chars = [p1, p2];
     const names = [myName(), saneName(sel.remName) || CHARS[chars[1]].name];
     // Send multiple start packets to guarantee delivery without drops
     netSend({ t: 'start', chars: chars, names: names });
-    setTimeout(() => netSend({ t: 'start', chars: chars, names: names }), 80);
-    setTimeout(() => netSend({ t: 'start', chars: chars, names: names }), 180);
+    setTimeout(() => netSend({ t: 'start', chars: chars, names: names }), 60);
+    setTimeout(() => netSend({ t: 'start', chars: chars, names: names }), 140);
+    setTimeout(() => netSend({ t: 'start', chars: chars, names: names }), 240);
     sfx('ok');
     destroyGameUI();
     createGame({ mode: 'host', chars: chars, names: names });
-  }, 500);
+  }, 250);
 }
 
 /* ============ Button & UI Event Bindings ============ */
@@ -2254,7 +2268,7 @@ $('nameInput').addEventListener('input', function() {
   if (v !== this.value) this.value = v;
   sel.name = saneName(this.value);
   if (sel.mode !== 'cpu' && sel.mode !== 'local2p' && sel.mode !== 'dojo' && net && net.up) {
-    netSend({ t: 'sel', i: sel.my, ready: sel.ready, name: myName(), tok: net.tok });
+    netSend({ t: 'sel', i: sel.my, r: sel.ready, ready: sel.ready, name: myName(), tok: net.tok });
   }
 });
 $('nameInput').addEventListener('keydown', e => e.stopPropagation());
@@ -2431,7 +2445,7 @@ $('btnReady').onclick = () => {
   }
 
   sel.ready = !sel.ready;
-  netSend({ t: 'sel', i: sel.my, ready: sel.ready, name: myName(), tok: net ? net.tok : null });
+  netSend({ t: 'sel', i: sel.my, r: sel.ready, ready: sel.ready, name: myName(), tok: net ? net.tok : null });
   updateSelUI();
   if (net && net.role === 'host' && sel.ready && sel.remReady) hostLaunch();
 };
